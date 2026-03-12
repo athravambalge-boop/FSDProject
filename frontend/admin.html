@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - MessMate</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1 class="title">Admin Dashboard 👨‍💼</h1>
+
+    <div class="dashboard">
+        <h2>Add New Mess</h2>
+        <input type="text" id="name" placeholder="Mess Name" required>
+        <input type="text" id="location" placeholder="Location" required>
+        <input type="number" id="price" placeholder="Monthly Price (₹)" required>
+        <select id="veg_type" required>
+            <option value="">Select Type</option>
+            <option value="Veg">Vegetarian</option>
+            <option value="Non-Veg">Non-Vegetarian</option>
+            <option value="Mixed">Mixed</option>
+        </select>
+        <input type="text" id="contact_number" placeholder="Contact Number" required>
+        <button onclick="addMess()">Add Mess</button>
+    </div>
+
+    <h2 style="text-align:center; color: white; margin-top: 30px;">All Messes</h2>
+    <div id="messList"></div>
+    
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2>Edit Mess</h2>
+            <input type="hidden" id="editMessId">
+            <input type="text" id="editName" placeholder="Mess Name" required>
+            <input type="text" id="editLocation" placeholder="Location" required>
+            <input type="number" id="editPrice" placeholder="Monthly Price (₹)" required>
+            <select id="editVegType" required>
+                <option value="">Select Type</option>
+                <option value="Veg">Vegetarian</option>
+                <option value="Non-Veg">Non-Vegetarian</option>
+                <option value="Mixed">Mixed</option>
+            </select>
+            <input type="text" id="editContact" placeholder="Contact Number" required>
+            <input type="number" id="editRating" placeholder="Rating (1-5)" min="1" max="5" step="0.1" required>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="saveEditMess()" style="flex: 1;">Save</button>
+                <button onclick="closeEditModal()" style="flex: 1; background: #95a5a6;">Cancel</button>
+            </div>
+        </div>
+    </div>
+    <a href="index.html">← Back to Home</a>
+
+<script src="admin.js"></script>
+
+</body>
+
+</html>

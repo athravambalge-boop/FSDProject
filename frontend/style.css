@@ -1,0 +1,484 @@
+/* ========================
+   GLOBAL STYLES
+======================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #333;
+    min-height: 100vh;
+}
+
+/* ========================
+   HEADER & NAVIGATION
+======================== */
+
+.title {
+    text-align: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 25px;
+    margin: 0;
+    font-size: 32px;
+    font-weight: 700;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.login-btn {
+    padding: 10px 25px;
+    background: white;
+    color: #667eea;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    position: static;
+    margin-left: auto;
+}
+
+.login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    background: #f0f0f0;
+}
+
+.login-btn:active {
+    transform: translateY(0);
+}
+
+/* ========================
+   MESS CONTAINER & CARDS
+======================== */
+
+#mess-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    padding: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.mess-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.mess-card:hover {
+    transform: translateY(-12px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+}
+
+.mess-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.mess-info {
+    padding: 20px;
+}
+
+.mess-info h2 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-size: 20px;
+}
+
+.location {
+    color: #7f8c8d;
+    margin: 8px 0;
+    font-size: 14px;
+}
+
+.price {
+    color: #27ae60;
+    font-weight: 700;
+    font-size: 18px;
+    margin: 10px 0;
+}
+
+.rating {
+    color: #f39c12;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+/* ========================
+   BUTTONS
+======================== */
+
+button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    width: 100%;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(102, 126, 234, 0.6);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+/* ========================
+   LOGIN PAGE
+======================== */
+
+.login-container {
+    width: 100%;
+    max-width: 400px;
+    margin: 80px auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    background: white;
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.login-container h2 {
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-size: 28px;
+}
+
+.login-container input {
+    padding: 12px;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.login-container input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+}
+
+#error {
+    color: #e74c3c;
+    font-size: 14px;
+    text-align: center;
+    padding: 10px;
+    background: #fadbd8;
+    border-radius: 6px;
+    display: none;
+}
+
+#error.show {
+    display: block;
+}
+
+/* ========================
+   DASHBOARD
+======================== */
+
+.dashboard {
+    max-width: 600px;
+    margin: 40px auto;
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.dashboard h2 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 24px;
+    border-bottom: 3px solid #667eea;
+    padding-bottom: 15px;
+}
+
+.dashboard input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 12px;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.dashboard input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+}
+
+.dashboard select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 12px;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background: white;
+    cursor: pointer;
+}
+
+.dashboard select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+}
+
+#message {
+    padding: 12px;
+    margin-top: 15px;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: 600;
+}
+
+#message.success {
+    background: #d5f4e6;
+    color: #27ae60;
+}
+
+#message.error {
+    background: #fadbd8;
+    color: #e74c3c;
+}
+
+/* ========================
+   MENU PAGE
+======================== */
+
+#messList {
+    max-width: 600px;
+    margin: 40px auto;
+}
+
+#messList > div {
+    background: white;
+    padding: 15px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+#messList > div:hover {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+    transform: translateX(5px);
+}
+
+#messList b {
+    color: #2c3e50;
+    font-size: 16px;
+    flex: 1;
+}
+
+#messList button {
+    padding: 8px 12px;
+    font-size: 12px;
+    width: auto;
+    margin: 0 5px;
+}
+
+/* ========================
+   MENU LIST
+======================== */
+
+#menu {
+    max-width: 600px;
+    margin: 40px auto;
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    list-style: none;
+}
+
+#menu li {
+    padding: 12px;
+    margin: 10px 0;
+    background: #f8f9fa;
+    border-left: 5px solid #667eea;
+    border-radius: 6px;
+    font-size: 15px;
+    color: #2c3e50;
+}
+
+/* ========================
+   MODAL
+======================== */
+
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 500px;
+}
+
+.modal-content h2 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 24px;
+    border-bottom: 3px solid #667eea;
+    padding-bottom: 10px;
+}
+
+.close {
+    color: #7f8c8d;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close:hover {
+    color: #e74c3c;
+}
+
+.modal-content input,
+.modal-content select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 12px;
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.modal-content input:focus,
+.modal-content select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+}
+
+/* ========================
+   BACK TO TOP / ANCHOR
+======================== */
+
+a {
+    color: white;
+    text-decoration: none;
+}
+
+html > body > a {
+    display: inline-block;
+    margin: 20px;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+html > body > a:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ========================
+   RESPONSIVE DESIGN
+======================== */
+
+@media (max-width: 768px) {
+    #mess-container {
+        grid-template-columns: 1fr;
+        padding: 20px;
+        gap: 20px;
+    }
+
+    .title {
+        font-size: 24px;
+        padding: 15px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .login-btn {
+        padding: 8px 15px;
+        font-size: 12px;
+        margin-left: auto;
+    }
+
+    .dashboard {
+        margin: 20px;
+        padding: 20px;
+    }
+
+    .login-container {
+        margin: 40px 20px;
+        padding: 25px;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .title {
+        font-size: 20px;
+    }
+
+    #mess-container {
+        padding: 15px;
+    }
+
+    .mess-card {
+        border-radius: 10px;
+    }
+
+    button {
+        padding: 10px 15px;
+        font-size: 13px;
+    }
+}
