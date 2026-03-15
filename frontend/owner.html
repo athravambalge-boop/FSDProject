@@ -9,18 +9,40 @@
 <body>
     <h1 class="title">Owner Dashboard 👨‍🍳</h1>
 
+    <!-- Add Menu Item -->
     <div class="dashboard">
-        <h2>Update Today's Menu</h2>
+        <h2>Add Menu Item</h2>
         <p id="message"></p>
-        <input type="text" id="breakfast" placeholder="Breakfast" required>
-        <input type="text" id="lunch" placeholder="Lunch" required>
-        <input type="text" id="dinner" placeholder="Dinner" required>
-        <button onclick="updateMenu()">Update Menu</button>
+        <input type="text" id="itemName" placeholder="Item Name (e.g. Idli)" required>
+        <input type="number" id="itemPrice" placeholder="Price (₹)" required>
+        <select id="itemCategory">
+            <option value="Breakfast">Breakfast</option>
+            <option value="Lunch">Lunch</option>
+            <option value="Dinner">Dinner</option>
+            <option value="Snacks">Snacks</option>
+            <option value="Drinks">Drinks</option>
+        </select>
+        <button onclick="addItem()">Add Item</button>
     </div>
+
+    <!-- Current Menu -->
+    <div class="dashboard" style="margin-top:20px;">
+        <h2>My Menu 📋</h2>
+        <div id="menuList"></div>
+    </div>
+
+    <!-- Incoming Orders -->
+    <div class="dashboard" style="margin-top:20px;">
+        <h2>Incoming Orders 🛒</h2>
+        <button onclick="loadOrders()" 
+            style="width:auto; padding:8px 15px; margin-bottom:15px;">
+            Refresh Orders
+        </button>
+        <div id="ordersList"></div>
+    </div>
+
     <a href="index.html">← Back to Home</a>
 
-<script src="owner.js"></script>
-
+    <script src="owner.js"></script>
 </body>
-
 </html>

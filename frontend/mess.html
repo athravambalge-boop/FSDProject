@@ -3,14 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Today's Menu - MessMate</title>
+    <title>Order Food - MessMate</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <h1 class="title">MessMate 🍽️</h1>
-    
-    <h2 style="text-align: center; margin-top: 30px; color: white;">Today's Menu</h2>
-    <ul id="menu"></ul>
+
+    <h2 style="text-align:center; color:white; margin-top:30px;" id="messTitle">Menu</h2>
+
+    <!-- Menu Items -->
+    <div id="menuContainer" style="max-width:800px; margin:20px auto; padding:0 20px;"></div>
+
+    <!-- Cart -->
+    <div id="cartSection" style="max-width:800px; margin:20px auto; padding:0 20px; display:none;">
+        <div class="dashboard">
+            <h2>Your Order 🛒</h2>
+            <div id="cartItems"></div>
+            <p id="cartTotal" style="color:#27ae60; font-weight:700; font-size:20px; margin:15px 0;"></p>
+            <input type="text" id="customerName" placeholder="Your Full Name" required>
+            <input type="text" id="customerPhone" placeholder="Your Phone Number" required>
+            <button onclick="placeOrder()" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
+                Place Order & Pay 💳
+            </button>
+        </div>
+    </div>
+
+    <!-- Order Success Modal -->
+    <div id="successModal" class="modal" style="display:none;">
+        <div class="modal-content" style="text-align:center;">
+            <div style="font-size:60px;">🎉</div>
+            <h2 style="color:#27ae60;">Order Placed!</h2>
+            <p style="color:#7f8c8d; margin:10px 0;">Your Order ID is:</p>
+            <p id="orderId" style="font-size:22px; font-weight:700; color:#667eea; 
+                background:#f0f0f0; padding:10px; border-radius:8px; margin:10px 0;"></p>
+            <p id="orderTotal" style="color:#27ae60; font-weight:700; font-size:18px;"></p>
+            <p style="color:#7f8c8d; font-size:13px; margin:10px 0;">
+                Show this Order ID at the mess counter to collect your food.
+            </p>
+            <button onclick="closeSuccessModal()" style="margin-top:10px;">
+                Back to Menu
+            </button>
+        </div>
+    </div>
+
     <a href="index.html">← Back to Messes</a>
 
     <script src="menu.js"></script>
