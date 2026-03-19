@@ -21,9 +21,10 @@
             <div id="cartItems"></div>
             <p id="cartTotal" style="color:#27ae60; font-weight:700; font-size:20px; margin:15px 0;"></p>
             <input type="text" id="customerName" placeholder="Your Full Name" required>
-            <input type="text" id="customerPhone" placeholder="Your Phone Number" required>
-            <button onclick="placeOrder()" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">
-                Place Order & Pay 💳
+            <input type="text" id="customerPhone" placeholder="Your Phone Number (10 digits)" required>
+            <input type="email" id="customerEmail" placeholder="Your Email (optional)">
+            <button onclick="placeOrder()" style="background: linear-gradient(135deg, #27ae60, #2ecc71); margin-top: 15px;">
+                Place Order & Confirm 💳
             </button>
         </div>
     </div>
@@ -48,6 +49,7 @@
 
     <a href="index.html">← Back to Messes</a>
 
+    <script src="utils.js"></script>
     <script src="menu.js"></script>
 </body>
 </html>

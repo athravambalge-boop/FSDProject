@@ -7,14 +7,44 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1 class="title">Owner Dashboard 👨‍🍳</h1>
+    <h1 class="title">
+        Owner Dashboard 👨‍🍳
+        <div class="user-bar">
+            <div class="user-info" style="display: flex;">
+                <span id="messName"></span>
+            </div>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </h1>
+
+    <!-- Stats Overview -->
+    <div style="max-width: 1000px; margin: 30px auto; padding: 0 20px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div class="dashboard" style="text-align: center; padding: 20px;">
+                <p style="color: #7f8c8d; margin: 0; font-size: 12px;">Pending Orders</p>
+                <p id="pendingCount" style="color: #f39c12; font-size: 28px; font-weight: 700; margin: 10px 0;">0</p>
+            </div>
+            <div class="dashboard" style="text-align: center; padding: 20px;">
+                <p style="color: #7f8c8d; margin: 0; font-size: 12px;">Ready for Pickup</p>
+                <p id="readyCount" style="color: #27ae60; font-size: 28px; font-weight: 700; margin: 10px 0;">0</p>
+            </div>
+            <div class="dashboard" style="text-align: center; padding: 20px;">
+                <p style="color: #7f8c8d; margin: 0; font-size: 12px;">Completed Today</p>
+                <p id="completedCount" style="color: #667eea; font-size: 28px; font-weight: 700; margin: 10px 0;">0</p>
+            </div>
+            <div class="dashboard" style="text-align: center; padding: 20px;">
+                <p style="color: #7f8c8d; margin: 0; font-size: 12px;">Today's Revenue</p>
+                <p id="revenueAmount" style="color: #27ae60; font-size: 24px; font-weight: 700; margin: 10px 0;">₹0</p>
+            </div>
+        </div>
+    </div>
 
     <!-- Add Menu Item -->
-    <div class="dashboard">
+    <div class="dashboard" style="max-width: 800px; margin: 30px auto; padding: 0 20px;">
         <h2>Add Menu Item</h2>
         <p id="message"></p>
         <input type="text" id="itemName" placeholder="Item Name (e.g. Idli)" required>
-        <input type="number" id="itemPrice" placeholder="Price (₹)" required>
+        <input type="number" id="itemPrice" placeholder="Price (₹)" step="0.01" required>
         <select id="itemCategory">
             <option value="Breakfast">Breakfast</option>
             <option value="Lunch">Lunch</option>
@@ -22,27 +52,46 @@
             <option value="Snacks">Snacks</option>
             <option value="Drinks">Drinks</option>
         </select>
-        <button onclick="addItem()">Add Item</button>
+        <button onclick="addItem()" style="background: linear-gradient(135deg, #27ae60, #2ecc71);">Add Item</button>
     </div>
 
     <!-- Current Menu -->
-    <div class="dashboard" style="margin-top:20px;">
+    <div class="dashboard" style="max-width: 800px; margin: 30px auto; padding: 0 20px;">
         <h2>My Menu 📋</h2>
         <div id="menuList"></div>
     </div>
 
-    <!-- Incoming Orders -->
-    <div class="dashboard" style="margin-top:20px;">
-        <h2>Incoming Orders 🛒</h2>
-        <button onclick="loadOrders()" 
-            style="width:auto; padding:8px 15px; margin-bottom:15px;">
-            Refresh Orders
-        </button>
-        <div id="ordersList"></div>
+    <!-- Orders Management -->
+    <div style="max-width: 1000px; margin: 30px auto; padding: 0 20px;">
+        <div class="dashboard">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0;">Orders Management 🛒</h2>
+                <button onclick="loadOrders()" 
+                    style="width: auto; padding: 8px 15px; background: #667eea;">
+                    🔄 Refresh
+                </button>
+            </div>
+
+            <!-- Filter -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px;">
+                <select id="orderFilter" onchange="loadOrders()" style="padding: 10px; border: 2px solid #ecf0f1; border-radius: 6px;">
+                    <option value="">All Orders</option>
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="preparing">Preparing</option>
+                    <option value="ready">Ready</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+
+            <div id="ordersList" style="display: grid; gap: 15px;"></div>
+        </div>
     </div>
 
     <a href="index.html">← Back to Home</a>
 
+    <script src="utils.js"></script>
     <script src="owner.js"></script>
 </body>
 </html>

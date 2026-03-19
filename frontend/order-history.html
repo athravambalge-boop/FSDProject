@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders - MessMate</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1 class="title">
+        MessMate 🍽️
+        <div class="user-bar">
+            <div class="user-info" id="userInfo">
+                <span id="userName"></span>
+            </div>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </h1>
+
+    <div style="max-width: 800px; margin: 40px auto; padding: 0 20px;">
+        <h2 style="text-align: center; color: white; margin-bottom: 30px;">📋 Your Order History</h2>
+
+        <div id="ordersContainer" style="display: grid; gap: 15px;"></div>
+
+        <div id="emptyMessage" style="text-align: center; color: white; padding: 40px;">
+            <p style="font-size: 18px;">No orders yet. <a href="index.html" style="color: #2ecc71; text-decoration: underline;">Start ordering now!</a></p>
+        </div>
+    </div>
+
+    <a href="index.html">← Back to Home</a>
+
+    <script src="utils.js"></script>
+    <script>
+        async function loadOrderHistory() {
+            try {
+                showLoading();
+
+                const session = getUserSession();
+                if (!session.customer_phone) {
+                    showToast('Please login first', 'warning');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 1000);
+                    return;
+                }
+
+                const response = await fetch(`http://localhost:5000/api/orders/customer/${session.customer_phone}`);
+                if (!response.ok) throw new Error('Failed to fetch orders');
+
+                const orders = await response.json();
+                hideLoading();
+
+                const container = document.getElementById('ordersContainer');
+                const emptyMsg = document.getElementById('emptyMessage');
+
+                if (!orders || orders.length === 0) {
+                    container.style.display = 'none';
+                    emptyMsg.style.display = 'block';
+                    return;
+                }
+
+                container.innerHTML = orders.map(order => `
+                    <div class="order-item">
+                        <div class="order-header">
+                            <span class="order-id">Order #${order.order_id}</span>
+                            <span class="status-badge ${order.status}">${order.status.toUpperCase()}</span>
+                        </div>
+                        <div class="order-meta">
+                            <div>
+                                <strong>Amount:</strong><br>
+                                ${formatCurrency(order.total_amount)}
+                            </div>
+                            <div>
+                                <strong>Date:</strong><br>
+                                ${formatDate(order.created_at)}
+                            </div>
+                        </div>
+                        <div style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">
+                            <strong>Items:</strong> ${order.items ? JSON.parse(order.items).map(i => i.name).join(', ') : 'N/A'}
+                        </div>
+                        <div style="text-align: right; margin-top: 10px;">
+                            <button onclick="trackOrder(${order.order_id})" style="width: auto; padding: 8px 16px; font-size: 12px; background: #667eea;">
+                                Track Order
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+                emptyMsg.style.display = 'none';
+
+            } catch (error) {
+                console.error('Error loading order history:', error);
+                hideLoading();
+                showToast('Failed to load orders', 'error');
+            }
+        }
+
+        function trackOrder(orderId) {
+            window.location.href = `track-order.html?id=${orderId}`;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const session = getUserSession();
+            document.getElementById('userName').textContent = `Hi ${session.customer_name}!`;
+            loadOrderHistory();
+        });
+    </script>
+</body>
+</html>

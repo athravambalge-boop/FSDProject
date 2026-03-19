@@ -27,7 +27,9 @@ const user = rows[0];
 res.json({
 message:"Login successful",
 role:user.role,
-mess_id:user.mess_id
+mess_id:user.mess_id,
+username:user.username,
+phone:user.phone || null
 });
 
 } catch(err){

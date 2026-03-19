@@ -4,20 +4,56 @@ const db = require("../config/db");
 const router = express.Router();
 
 /* -------------------------
-   GET ALL MESSES
+   GET ALL MESSES (WITH SEARCH & FILTER)
 --------------------------*/
 
 router.get("/", async (req, res) => {
 
 try{
 
-const [rows] = await db.query("SELECT * FROM mess");
+const { search, minPrice, maxPrice, minRating, location } = req.query;
+let query = "SELECT * FROM mess WHERE 1=1";
+const params = [];
+
+// Search by name or location
+if (search) {
+  query += " AND (name LIKE ? OR location LIKE ?)";
+  const searchTerm = `%${search}%`;
+  params.push(searchTerm, searchTerm);
+}
+
+// Filter by location
+if (location) {
+  query += " AND location LIKE ?";
+  params.push(`%${location}%`);
+}
+
+// Filter by price range
+if (minPrice) {
+  query += " AND monthly_price >= ?";
+  params.push(parseFloat(minPrice));
+}
+
+if (maxPrice) {
+  query += " AND monthly_price <= ?";
+  params.push(parseFloat(maxPrice));
+}
+
+// Filter by minimum rating
+if (minRating) {
+  query += " AND rating >= ?";
+  params.push(parseFloat(minRating));
+}
+
+query += " ORDER BY rating DESC";
+
+const [rows] = await db.query(query, params);
 
 res.json(rows);
 
 }catch(err){
 
-console.error(err);
+console.error("Error fetching messes:", err);
 res.status(500).json({error:"Database error"});
 
 }
@@ -47,6 +83,93 @@ res.json(rows[0]);
 }catch(err){
 
 console.error(err);
+res.status(500).json({error:"Database error"});
+
+}
+
+});
+
+/* -------------------------
+   GET CUSTOMER FAVORITES
+--------------------------*/
+
+router.get("/favorites/:phone", async (req, res) => {
+
+try{
+
+const { phone } = req.params;
+
+const [favorites] = await db.query(
+`SELECT m.* FROM mess m
+JOIN favorites f ON m.mess_id = f.mess_id
+WHERE f.customer_phone = ?
+ORDER BY f.added_at DESC`,
+[phone]
+);
+
+res.json(favorites);
+
+}catch(err){
+
+console.error("Error fetching favorites:", err);
+res.status(500).json({error:"Database error"});
+
+}
+
+});
+
+/* -------------------------
+   ADD FAVORITE
+--------------------------*/
+
+router.post("/favorite/add", async (req, res) => {
+
+try{
+
+const { customer_phone, mess_id } = req.body;
+
+if (!customer_phone || !mess_id) {
+  return res.status(400).json({error: "Missing required fields"});
+}
+
+await db.query(
+`INSERT INTO favorites (customer_phone, mess_id) 
+VALUES (?, ?)
+ON DUPLICATE KEY UPDATE added_at = CURRENT_TIMESTAMP`,
+[customer_phone, mess_id]
+);
+
+res.json({message: "Added to favorites"});
+
+}catch(err){
+
+console.error("Error adding favorite:", err);
+res.status(500).json({error:"Database error"});
+
+}
+
+});
+
+/* -------------------------
+   REMOVE FAVORITE
+--------------------------*/
+
+router.delete("/favorite/remove/:phone/:messId", async (req, res) => {
+
+try{
+
+const { phone, messId } = req.params;
+
+await db.query(
+`DELETE FROM favorites WHERE customer_phone = ? AND mess_id = ?`,
+[phone, messId]
+);
+
+res.json({message: "Removed from favorites"});
+
+}catch(err){
+
+console.error("Error removing favorite:", err);
 res.status(500).json({error:"Database error"});
 
 }
