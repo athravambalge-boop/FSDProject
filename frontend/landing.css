@@ -1,0 +1,420 @@
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Manrope:wght@400;500;700;800&display=swap');
+
+:root {
+    --bg: #f6f8f5;
+    --ink: #13231c;
+    --ink-soft: #3f4f47;
+    --brand: #0f7c6c;
+    --brand-deep: #0b5a4e;
+    --accent: #ff8f3a;
+    --card: #ffffff;
+    --line: rgba(19, 35, 28, 0.12);
+    --shadow: 0 18px 40px rgba(20, 48, 38, 0.12);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Manrope", "Segoe UI", sans-serif;
+    background:
+        radial-gradient(circle at 15% 20%, rgba(255, 143, 58, 0.22), transparent 48%),
+        radial-gradient(circle at 80% 10%, rgba(15, 124, 108, 0.18), transparent 52%),
+        linear-gradient(165deg, #f8fbf8 0%, #eef4ef 62%, #eaf2ee 100%);
+    color: var(--ink);
+    overflow-x: hidden;
+}
+
+.bg-shape {
+    position: fixed;
+    border-radius: 999px;
+    pointer-events: none;
+    filter: blur(2px);
+    opacity: 0.55;
+    z-index: -1;
+    animation: float 9s ease-in-out infinite;
+}
+
+.bg-shape-one {
+    width: 360px;
+    height: 360px;
+    top: -140px;
+    right: -80px;
+    background: linear-gradient(210deg, rgba(255, 143, 58, 0.65), rgba(255, 143, 58, 0.08));
+}
+
+.bg-shape-two {
+    width: 310px;
+    height: 310px;
+    left: -120px;
+    bottom: 10vh;
+    background: linear-gradient(130deg, rgba(15, 124, 108, 0.6), rgba(15, 124, 108, 0.1));
+    animation-delay: 1.5s;
+}
+
+.site-header {
+    width: min(1120px, 92vw);
+    margin: 24px auto 0;
+    padding: 16px 22px;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.brand {
+    font-family: "Chakra Petch", sans-serif;
+    font-size: 1.55rem;
+    color: var(--brand-deep);
+    text-decoration: none;
+    letter-spacing: 0.4px;
+}
+
+.top-nav {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.top-nav a {
+    text-decoration: none;
+    color: var(--ink);
+    font-weight: 600;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.top-nav a:hover {
+    color: var(--brand);
+    transform: translateY(-1px);
+}
+
+main {
+    width: min(1120px, 92vw);
+    margin: 24px auto 20px;
+}
+
+.hero {
+    border-radius: 26px;
+    border: 1px solid rgba(19, 35, 28, 0.09);
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.72));
+    box-shadow: var(--shadow);
+    padding: clamp(24px, 5vw, 56px);
+    animation: rise 0.75s ease-out;
+}
+
+.eyebrow {
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 700;
+    color: var(--brand-deep);
+    font-size: 0.78rem;
+}
+
+.hero h1 {
+    margin: 10px 0 14px;
+    font-family: "Chakra Petch", sans-serif;
+    font-size: clamp(2rem, 6vw, 3.95rem);
+    line-height: 1.03;
+    max-width: 14ch;
+}
+
+.subtitle {
+    margin: 0;
+    max-width: 58ch;
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+}
+
+.hero-actions {
+    margin-top: 26px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 170px;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-weight: 800;
+    text-decoration: none;
+    border: 2px solid transparent;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%);
+    color: #fff;
+    box-shadow: 0 10px 25px rgba(10, 90, 78, 0.32);
+}
+
+.btn-outline {
+    border-color: rgba(19, 35, 28, 0.2);
+    color: var(--ink);
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.hero-metrics {
+    margin-top: 30px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.hero-metrics div {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px;
+}
+
+.metric {
+    font-family: "Chakra Petch", sans-serif;
+    color: var(--brand-deep);
+    font-size: 1.45rem;
+    line-height: 1;
+}
+
+.hero-metrics p {
+    margin: 8px 0 0;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+}
+
+.features {
+    margin-top: 22px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.card {
+    background: var(--card);
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    padding: 20px;
+    box-shadow: 0 10px 26px rgba(21, 42, 33, 0.07);
+}
+
+.card h2 {
+    margin: 0 0 8px;
+    font-size: 1.2rem;
+}
+
+.card p {
+    margin: 0;
+    color: var(--ink-soft);
+}
+
+.reveal {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: reveal 0.65s ease forwards;
+}
+
+.reveal:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.reveal:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+.roles {
+    margin-top: 22px;
+    border-radius: 24px;
+    background: linear-gradient(135deg, #102921 0%, #134033 100%);
+    color: #ebf8f2;
+    padding: clamp(22px, 4vw, 34px);
+}
+
+.roles h2 {
+    margin: 0 0 14px;
+    font-family: "Chakra Petch", sans-serif;
+    font-size: clamp(1.5rem, 3.2vw, 2.2rem);
+}
+
+.role-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.role {
+    text-decoration: none;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    padding: 16px;
+    color: #f4f9f6;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.role:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.role h3 {
+    margin: 0 0 6px;
+}
+
+.role p {
+    margin: 0;
+    color: rgba(244, 249, 246, 0.88);
+}
+
+.contact {
+    margin-top: 22px;
+    border-radius: 24px;
+    border: 1px solid var(--line);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(244, 250, 246, 0.9));
+    box-shadow: 0 12px 28px rgba(21, 42, 33, 0.08);
+    padding: clamp(22px, 4vw, 34px);
+}
+
+.contact h2 {
+    margin: 0;
+    font-family: "Chakra Petch", sans-serif;
+    font-size: clamp(1.5rem, 3.2vw, 2.1rem);
+    color: var(--brand-deep);
+}
+
+.contact-subtitle {
+    margin: 8px 0 0;
+    color: var(--ink-soft);
+}
+
+.contact-grid {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.contact-card {
+    border-radius: 16px;
+    border: 1px solid rgba(19, 35, 28, 0.12);
+    background: #fff;
+    padding: 16px;
+}
+
+.contact-card h3 {
+    margin: 0 0 10px;
+    color: var(--ink);
+}
+
+.contact-card p {
+    margin: 0 0 10px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+}
+
+.contact-card p:last-child {
+    margin-bottom: 0;
+}
+
+.contact-card a {
+    color: var(--brand-deep);
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.contact-card a:hover {
+    text-decoration: underline;
+}
+
+.social-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.social-links a[aria-disabled="true"] {
+    color: #607068;
+}
+
+.site-footer {
+    width: min(1120px, 92vw);
+    margin: 12px auto 32px;
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+}
+
+@keyframes rise {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes reveal {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes float {
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-16px);
+    }
+}
+
+@media (max-width: 950px) {
+    .hero-metrics,
+    .features,
+    .role-grid,
+    .contact-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .site-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .top-nav {
+        gap: 12px;
+    }
+}
+
+@media (max-width: 600px) {
+    .btn {
+        width: 100%;
+    }
+
+    .subtitle {
+        font-size: 1rem;
+    }
+}

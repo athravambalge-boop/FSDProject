@@ -139,6 +139,24 @@ function debounceSearch() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const session = getUserSession();
+
+    if (!session.role) {
+        // Keep landing as the first touchpoint for unauthenticated visitors.
+        window.location.href = 'landing.html';
+        return;
+    }
+
+    if (session.role === 'owner') {
+        window.location.href = 'owner.html';
+        return;
+    }
+
+    if (session.role === 'admin') {
+        window.location.href = 'admin.html';
+        return;
+    }
+
     initializeUserBar();
     loadMess();
 

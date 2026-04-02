@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
     item_price DECIMAL(10, 2) NOT NULL,
     category VARCHAR(50),
     description TEXT,
-    available BOOLEAN DEFAULT 1,
+    is_available BOOLEAN DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (mess_id) REFERENCES mess(mess_id) ON DELETE CASCADE,
@@ -71,8 +71,17 @@ CREATE TABLE IF NOT EXISTS orders (
     customer_email VARCHAR(100),
     items JSON NOT NULL,
     total_amount DECIMAL(10, 2) NOT NULL,
+    wallet_used DECIMAL(10, 2) DEFAULT 0,
+    cashback_earned DECIMAL(10, 2) DEFAULT 0,
     status ENUM('pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled') DEFAULT 'pending',
-    payment_method VARCHAR(50) DEFAULT 'cash',
+    payment_method ENUM('cash', 'online') DEFAULT 'cash',
+    payment_status ENUM('pending', 'paid', 'failed', 'refunded') DEFAULT 'pending',
+    payment_provider VARCHAR(50),
+    payment_order_id VARCHAR(100),
+    payment_id VARCHAR(100),
+    payment_signature VARCHAR(255),
+    paid_at DATETIME,
+    refunded_at DATETIME,
     special_instructions TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -80,7 +89,9 @@ CREATE TABLE IF NOT EXISTS orders (
     INDEX idx_mess_id (mess_id),
     INDEX idx_status (status),
     INDEX idx_created_at (created_at),
-    INDEX idx_phone (customer_phone)
+    INDEX idx_phone (customer_phone),
+    INDEX idx_payment_status (payment_status),
+    INDEX idx_payment_order_id (payment_order_id)
 );
 
 -- ============================================================
@@ -93,13 +104,47 @@ CREATE TABLE IF NOT EXISTS customers (
     email VARCHAR(100),
     total_orders INT DEFAULT 0,
     total_spent DECIMAL(10, 2) DEFAULT 0,
+    wallet_balance DECIMAL(10, 2) DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_phone (phone)
 );
 
 -- ============================================================
--- 6. FAVORITES TABLE (For saved messes)
+-- 6. WALLET_TRANSACTIONS TABLE (For wallet credits/debits)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS wallet_transactions (
+    transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_phone VARCHAR(20) NOT NULL,
+    type ENUM('credit', 'debit') NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    reference_order_id INT,
+    note VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_wallet_customer_phone (customer_phone),
+    INDEX idx_wallet_created_at (created_at)
+);
+
+-- ============================================================
+-- 7. PAYMENT_EVENTS TABLE (For gateway event logs)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS payment_events (
+    event_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    payment_order_id VARCHAR(100),
+    payment_id VARCHAR(100),
+    event_type VARCHAR(50) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    gateway_payload JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+    INDEX idx_payment_events_order_id (order_id),
+    INDEX idx_payment_events_payment_id (payment_id)
+);
+
+-- ============================================================
+-- 8. FAVORITES TABLE (For saved messes)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS favorites (
     favorite_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -112,7 +157,7 @@ CREATE TABLE IF NOT EXISTS favorites (
 );
 
 -- ============================================================
--- 7. PROMOS TABLE (For discount codes)
+-- 9. PROMOS TABLE (For discount codes)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS promos (
     promo_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -131,7 +176,7 @@ CREATE TABLE IF NOT EXISTS promos (
 );
 
 -- ============================================================
--- 8. REVIEWS TABLE (For ratings & feedback)
+-- 10. REVIEWS TABLE (For ratings & feedback)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS reviews (
     review_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -183,6 +228,8 @@ DESCRIBE mess;
 DESCRIBE menu_items;
 DESCRIBE orders;
 DESCRIBE customers;
+DESCRIBE wallet_transactions;
+DESCRIBE payment_events;
 DESCRIBE favorites;
 DESCRIBE promos;
 DESCRIBE reviews;

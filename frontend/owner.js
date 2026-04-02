@@ -12,22 +12,22 @@ const messName = localStorage.getItem("mess_name") || "My Mess";
         setTimeout(() => {
             window.location.href = "login.html";
         }, 1000);
+        return;
     }
-    
+
     document.getElementById('messName').textContent = messName;
 })();
 
 /* ========================
    LOAD DASHBOARD STATS
 ======================== */
-
 async function loadStats() {
     try {
         const res = await fetch(`http://localhost:5000/api/orders/${messId}/stats/overview`);
         if (!res.ok) throw new Error('Failed to load stats');
-        
+
         const stats = await res.json();
-        
+
         document.getElementById('pendingCount').textContent = stats.pending_orders || 0;
         document.getElementById('readyCount').textContent = stats.completed_orders || 0;
         document.getElementById('completedCount').textContent = stats.completed_orders || 0;
@@ -107,7 +107,7 @@ async function addItem() {
 
 async function loadMenu() {
     try {
-        const res = await fetch(`http://localhost:5000/api/menu/${messId}`);
+        const res = await fetch(`http://localhost:5000/api/menu/${messId}?include_unavailable=1`);
         if (!res.ok) throw new Error('Failed to load menu');
         
         const items = await res.json();
@@ -121,22 +121,59 @@ async function loadMenu() {
         container.innerHTML = items.map(item => `
             <div style="display:flex; justify-content:space-between; align-items:center;
                         background:#f8f9fa; padding:12px; margin:8px 0;
-                        border-radius:8px; border-left:4px solid #667eea;">
+                        border-radius:8px; border-left:4px solid ${item.is_available ? '#27ae60' : '#95a5a6'};">
                 <div>
                     <b style="color:#2c3e50;">${item.item_name}</b>
                     <span style="color:#7f8c8d; font-size:12px; margin-left:8px;">${item.category || 'Uncategorized'}</span><br>
                     <span style="color:#27ae60; font-weight:700;">${formatCurrency(item.item_price)}</span>
+                    <span style="margin-left:10px; font-size:12px; font-weight:700; color:${item.is_available ? '#27ae60' : '#e67e22'};">
+                        ${item.is_available ? 'Available' : 'Unavailable'}
+                    </span>
                 </div>
-                <button onclick="deleteItem(${item.item_id})"
-                    style="width:auto; padding:6px 12px; background:#e74c3c; font-size:12px;">
-                    Delete
-                </button>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="toggleItemAvailability(${item.item_id}, ${item.is_available ? 1 : 0})"
+                        style="width:auto; padding:6px 12px; background:${item.is_available ? '#f39c12' : '#27ae60'}; font-size:12px;">
+                        ${item.is_available ? 'Mark Unavailable' : 'Mark Available'}
+                    </button>
+                    <button onclick="deleteItem(${item.item_id})"
+                        style="width:auto; padding:6px 12px; background:#e74c3c; font-size:12px;">
+                        Delete
+                    </button>
+                </div>
             </div>
         `).join("");
     } catch (error) {
         console.error('Error loading menu:', error);
         document.getElementById("menuList").innerHTML = "<p style='color:#e74c3c;'>Error loading menu. Try refreshing the page.</p>";
         showToast('Failed to load menu', 'error');
+    }
+}
+
+/* ========================
+   TOGGLE ITEM AVAILABILITY
+======================== */
+
+async function toggleItemAvailability(itemId, currentAvailability) {
+    const nextAvailability = currentAvailability ? 0 : 1;
+
+    try {
+        const res = await fetch(`http://localhost:5000/api/menu/item/${itemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_available: nextAvailability })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            showToast(nextAvailability ? 'Item marked available' : 'Item marked unavailable', 'success');
+            loadMenu();
+        } else {
+            throw new Error(data.error || 'Failed to update availability');
+        }
+    } catch (error) {
+        console.error('Error updating availability:', error);
+        showToast(error.message, 'error');
     }
 }
 
@@ -216,6 +253,10 @@ async function loadOrders() {
                             <strong>Amount:</strong><br>
                             ${formatCurrency(order.total_amount)}
                         </div>
+                    </div>
+
+                    <div style="font-size: 12px; margin: 4px 0; color: #2c3e50;">
+                        <strong>Payment:</strong> ${(order.payment_method || 'cash').toUpperCase()} | ${(order.payment_status || 'pending').toUpperCase()}
                     </div>
 
                     <div style="font-size: 12px; margin: 10px 0;">

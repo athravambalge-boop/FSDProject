@@ -8,10 +8,12 @@ const router = express.Router();
 --------------------------*/
 router.get("/:mess_id", async (req, res) => {
   try {
-    const [rows] = await db.query(
-      "SELECT * FROM menu_items WHERE mess_id=? AND is_available=1 ORDER BY category",
-      [req.params.mess_id]
-    );
+    const includeUnavailable = req.query.include_unavailable === "1";
+    const query = includeUnavailable
+      ? "SELECT * FROM menu_items WHERE mess_id=? ORDER BY category"
+      : "SELECT * FROM menu_items WHERE mess_id=? AND is_available=1 ORDER BY category";
+
+    const [rows] = await db.query(query, [req.params.mess_id]);
     res.json(rows);
   } catch (err) {
     console.error(err);

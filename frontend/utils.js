@@ -216,6 +216,6 @@ function logout() {
     clearUserSession();
     showToast('Logged out successfully!', 'info');
     setTimeout(() => {
-        window.location.href = 'index.html';
+        window.location.href = 'login.html';
     }, 500);
 }

@@ -2,6 +2,87 @@ const params = new URLSearchParams(window.location.search);
 const messId = params.get("id");
 const cart = {};
 let messName = '';
+let allMenuItems = [];
+let lastOrderPhone = '';
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getFoodImage(item) {
+    const seed = `${item.category || 'food'}-${item.item_name || 'item'}`;
+    return `https://picsum.photos/seed/${encodeURIComponent(seed)}/640/360`;
+}
+
+function renderMenuItems(itemsToRender) {
+    const container = document.getElementById("menuContainer");
+
+    if (!itemsToRender || itemsToRender.length === 0) {
+        container.innerHTML = `
+            <div class="dashboard" style="text-align:center;">
+                <p style="color:#7f8c8d;">No matching items found.</p>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="order-grid">
+            ${itemsToRender.map(item => {
+                const safeName = item.item_name.replace(/'/g, "\\'");
+                const imageUrl = getFoodImage(item);
+                return `
+                    <article class="order-card">
+                        <img
+                            class="order-card-image"
+                            src="${imageUrl}"
+                            alt="${escapeHtml(item.item_name)}"
+                            loading="lazy"
+                            onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22640%22 height=%22360%22%3E%3Crect fill=%22%232b2f3c%22 width=%22640%22 height=%22360%22/%3E%3Ctext fill=%22white%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2230%22%3EMenu Item%3C/text%3E%3C/svg%3E'"
+                        >
+                        <div class="order-card-body">
+                            <div class="order-card-title-row">
+                                <h3>${escapeHtml(item.item_name)}</h3>
+                                <span class="order-card-tag">${escapeHtml(item.category || 'Meal')}</span>
+                            </div>
+                            <p class="order-card-desc">Freshly prepared at ${escapeHtml(messName)}.</p>
+                            <div class="order-card-footer">
+                                <span class="order-card-price">${formatCurrency(item.item_price)}</span>
+                                <div class="order-qty-controls">
+                                    <button class="qty-btn qty-minus" onclick="changeQty(${item.item_id}, -1, '${safeName}', ${item.item_price})">-</button>
+                                    <span id="qty_${item.item_id}" class="qty-value">${cart[item.item_id]?.quantity || 0}</span>
+                                    <button class="qty-btn qty-plus" onclick="changeQty(${item.item_id}, 1, '${safeName}', ${item.item_price})">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                `;
+            }).join("")}
+        </div>
+    `;
+}
+
+function filterMenu() {
+    const searchInput = document.getElementById("menuSearchInput");
+    const query = (searchInput?.value || "").trim().toLowerCase();
+
+    if (!query) {
+        renderMenuItems(allMenuItems);
+        return;
+    }
+
+    const filteredItems = allMenuItems.filter(item => {
+        const name = (item.item_name || "").toLowerCase();
+        const category = (item.category || "").toLowerCase();
+        return name.includes(query) || category.includes(query);
+    });
+
+    renderMenuItems(filteredItems);
+}
 
 async function loadMenu() {
     try {
@@ -20,7 +101,7 @@ async function loadMenu() {
         
         const mess = await messRes.json();
         messName = mess.name;
-        document.getElementById("messTitle").innerText = `${mess.name} 🍽️`;
+        document.getElementById("messTitle").innerText = `Choose Order · ${mess.name}`;
 
         // load menu items
         const res = await fetch(`http://localhost:5000/api/menu/${messId}`);
@@ -38,48 +119,8 @@ async function loadMenu() {
             return;
         }
 
-        // group by category
-        const categories = {};
-        items.forEach(item => {
-            if (!categories[item.category]) categories[item.category] = [];
-            categories[item.category].push(item);
-        });
-
-        // render menu
-        const container = document.getElementById("menuContainer");
-        container.innerHTML = "";
-
-        Object.keys(categories).forEach(category => {
-            const section = document.createElement("div");
-            section.className = "dashboard";
-            section.style.marginBottom = "20px";
-            section.innerHTML = `<h2>${category}</h2>`;
-
-            categories[category].forEach(item => {
-                const div = document.createElement("div");
-                div.style.cssText = `
-                    display:flex; justify-content:space-between; align-items:center;
-                    padding:12px; margin:8px 0; background:#f8f9fa;
-                    border-radius:8px; border-left:4px solid #667eea;
-                `;
-                div.innerHTML = `
-                    <div>
-                        <b style="color:#2c3e50;">${item.item_name}</b><br>
-                        <span style="color:#27ae60; font-weight:700;">${formatCurrency(item.item_price)}</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <button onclick="changeQty(${item.item_id}, -1, '${item.item_name.replace(/'/g, "\\'")}', ${item.item_price})"
-                            style="width:35px; padding:5px; font-size:18px; background: #e74c3c;">-</button>
-                        <span id="qty_${item.item_id}" style="font-weight:700; min-width:20px; text-align:center;">0</span>
-                        <button onclick="changeQty(${item.item_id}, 1, '${item.item_name.replace(/'/g, "\\'")}', ${item.item_price})"
-                            style="width:35px; padding:5px; font-size:18px; background: #27ae60;">+</button>
-                    </div>
-                `;
-                section.appendChild(div);
-            });
-
-            container.appendChild(section);
-        });
+        allMenuItems = items;
+        renderMenuItems(allMenuItems);
 
         hideLoading();
         showToast(`Welcome to ${messName}`, 'info');
@@ -190,7 +231,8 @@ async function placeOrder() {
                 customer_name,
                 customer_phone,
                 customer_email,
-                items: cartItems
+                items: cartItems,
+                payment_method: 'cash'
             })
         });
 
@@ -201,6 +243,7 @@ async function placeOrder() {
         if (res.ok) {
             // Save order ID for tracking
             const orderId = data.order_id;
+            lastOrderPhone = customer_phone;
             
             // Save user session with visitor role
             saveUserSession('visitor', null, customer_phone, customer_name);
@@ -208,6 +251,8 @@ async function placeOrder() {
             // Show success modal
             document.getElementById("orderId").innerText = `#${orderId}`;
             document.getElementById("orderTotal").innerText = `Total Paid: ${formatCurrency(data.total_amount)}`;
+            const walletInfoEl = document.getElementById("orderWalletInfo");
+            walletInfoEl.innerText = `Status: Order Booked`;
             document.getElementById("successModal").style.display = "flex";
 
             showToast('Order placed successfully! 🎉', 'success');
@@ -238,7 +283,8 @@ async function placeOrder() {
 function closeSuccessModal() {
     document.getElementById("successModal").style.display = "none";
     setTimeout(() => {
-        window.location.href = `track-order.html?phone=${encodeURIComponent(document.getElementById("customerPhone").value)}`;
+        const phoneForRedirect = lastOrderPhone || document.getElementById("customerPhone").value;
+        window.location.href = `track-order.html?phone=${encodeURIComponent(phoneForRedirect)}`;
     }, 500);
 }
 
@@ -248,6 +294,11 @@ function closeSuccessModal() {
 
 document.addEventListener('DOMContentLoaded', () => {
     loadMenu();
+
+    const menuSearchInput = document.getElementById("menuSearchInput");
+    if (menuSearchInput) {
+        menuSearchInput.addEventListener('input', filterMenu);
+    }
 
     // Check if email field exists and add to cart update
     const emailField = document.getElementById("customerEmail");

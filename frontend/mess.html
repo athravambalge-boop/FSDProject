@@ -7,24 +7,37 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1 class="title">MessMate 🍽️</h1>
+    <h1 class="title"><a href="landing.html" class="title-brand">MessMate 🍽️</a></h1>
 
-    <h2 style="text-align:center; color:white; margin-top:30px;" id="messTitle">Menu</h2>
+    <div class="menu-page-header">
+        <h2 id="messTitle">Choose Order</h2>
+        <div class="menu-search-wrap">
+            <input type="text" id="menuSearchInput" class="menu-search-input" placeholder="Search food by name or category...">
+        </div>
+    </div>
 
     <!-- Menu Items -->
-    <div id="menuContainer" style="max-width:800px; margin:20px auto; padding:0 20px;"></div>
+    <div id="menuContainer" class="menu-page-container"></div>
 
     <!-- Cart -->
-    <div id="cartSection" style="max-width:800px; margin:20px auto; padding:0 20px; display:none;">
+    <div id="cartSection" style="max-width:1000px; margin:20px auto; padding:0 20px; display:none;">
         <div class="dashboard">
             <h2>Your Order 🛒</h2>
+            <div id="walletInfo" class="wallet-inline-info" style="display:none;">
+                <span>Wallet Balance:</span>
+                <strong id="walletBalanceText">₹0.00</strong>
+            </div>
             <div id="cartItems"></div>
             <p id="cartTotal" style="color:#27ae60; font-weight:700; font-size:20px; margin:15px 0;"></p>
+            <label class="wallet-use-row" id="walletUseRow" style="display:none;">
+                <input type="checkbox" id="useWalletCheckbox">
+                <span>Use wallet cash for this order</span>
+            </label>
             <input type="text" id="customerName" placeholder="Your Full Name" required>
             <input type="text" id="customerPhone" placeholder="Your Phone Number (10 digits)" required>
             <input type="email" id="customerEmail" placeholder="Your Email (optional)">
             <button onclick="placeOrder()" style="background: linear-gradient(135deg, #27ae60, #2ecc71); margin-top: 15px;">
-                Place Order & Confirm 💳
+                Book Food
             </button>
         </div>
     </div>
@@ -38,6 +51,7 @@
             <p id="orderId" style="font-size:22px; font-weight:700; color:#667eea; 
                 background:#f0f0f0; padding:10px; border-radius:8px; margin:10px 0;"></p>
             <p id="orderTotal" style="color:#27ae60; font-weight:700; font-size:18px;"></p>
+            <p id="orderWalletInfo" style="color:#667eea; font-weight:600; font-size:14px;"></p>
             <p style="color:#7f8c8d; font-size:13px; margin:10px 0;">
                 Show this Order ID at the mess counter to collect your food.
             </p>
@@ -47,7 +61,7 @@
         </div>
     </div>
 
-    <a href="index.html">← Back to Messes</a>
+    <a href="index.html" class="menu-back-link">← Back to Messes</a>
 
     <script src="utils.js"></script>
     <script src="menu.js"></script>

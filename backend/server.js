@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const db = require("./config/db");
 
 const app = express();
 const PORT = 5000;
@@ -20,11 +21,13 @@ const authRoutes = require("./routes/authRoutes");
 const messRoutes = require("./routes/messRoutes");
 const menuRoutes = require("./routes/menuRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/mess", messRoutes);
 app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/payments", paymentRoutes);
 
 /* -------------------------
    TEST ROUTE
@@ -33,9 +36,121 @@ app.get("/", (req, res) => {
   res.send("Backend running successfully");
 });
 
+async function ensureWalletSchema() {
+   async function addColumnIfMissing(tableName, columnName, definition) {
+      const [rows] = await db.query(
+         `SELECT 1
+          FROM information_schema.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = ?
+            AND COLUMN_NAME = ?
+          LIMIT 1`,
+         [tableName, columnName]
+      );
+
+      if (rows.length === 0) {
+         await db.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+      }
+   }
+
+   // Add wallet columns if missing
+   await addColumnIfMissing("customers", "wallet_balance", "DECIMAL(10,2) DEFAULT 0");
+   await addColumnIfMissing("orders", "wallet_used", "DECIMAL(10,2) DEFAULT 0");
+   await addColumnIfMissing("orders", "cashback_earned", "DECIMAL(10,2) DEFAULT 0");
+
+   // Wallet transaction ledger for credits/debits
+   await db.query(`
+      CREATE TABLE IF NOT EXISTS wallet_transactions (
+         transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+         customer_phone VARCHAR(20) NOT NULL,
+         type ENUM('credit', 'debit') NOT NULL,
+         amount DECIMAL(10,2) NOT NULL,
+         reference_order_id INT NULL,
+         note VARCHAR(255),
+         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+         INDEX idx_wallet_customer_phone (customer_phone),
+         INDEX idx_wallet_created_at (created_at)
+      )
+   `);
+}
+
+async function ensurePaymentSchema() {
+   async function addColumnIfMissing(tableName, columnName, definition) {
+      const [rows] = await db.query(
+         `SELECT 1
+          FROM information_schema.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = ?
+            AND COLUMN_NAME = ?
+          LIMIT 1`,
+         [tableName, columnName]
+      );
+
+      if (rows.length === 0) {
+         await db.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+      }
+   }
+
+   async function addIndexIfMissing(tableName, indexName, indexColumnsSql) {
+      const [rows] = await db.query(
+         `SELECT 1
+          FROM information_schema.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = ?
+            AND INDEX_NAME = ?
+          LIMIT 1`,
+         [tableName, indexName]
+      );
+
+      if (rows.length === 0) {
+         await db.query(`ALTER TABLE ${tableName} ADD INDEX ${indexName} (${indexColumnsSql})`);
+      }
+   }
+
+   await addColumnIfMissing("orders", "payment_method", "ENUM('cash', 'online') DEFAULT 'online'");
+   await addColumnIfMissing("orders", "payment_status", "ENUM('pending', 'paid', 'failed', 'refunded') DEFAULT 'pending'");
+   await addColumnIfMissing("orders", "payment_provider", "VARCHAR(50) DEFAULT NULL");
+   await addColumnIfMissing("orders", "payment_order_id", "VARCHAR(100) DEFAULT NULL");
+   await addColumnIfMissing("orders", "payment_id", "VARCHAR(100) DEFAULT NULL");
+   await addColumnIfMissing("orders", "payment_signature", "VARCHAR(255) DEFAULT NULL");
+   await addColumnIfMissing("orders", "paid_at", "DATETIME NULL");
+   await addColumnIfMissing("orders", "refunded_at", "DATETIME NULL");
+
+   // Ensure enum includes Pine Labs option for older schemas
+   await db.query(
+      "ALTER TABLE orders MODIFY COLUMN payment_method ENUM('cash', 'online') DEFAULT 'online'"
+   );
+   await addIndexIfMissing("orders", "idx_payment_status", "payment_status");
+   await addIndexIfMissing("orders", "idx_payment_order_id", "payment_order_id");
+
+   await db.query(`
+      CREATE TABLE IF NOT EXISTS payment_events (
+         event_id INT AUTO_INCREMENT PRIMARY KEY,
+         order_id INT NOT NULL,
+         payment_order_id VARCHAR(100) NULL,
+         payment_id VARCHAR(100) NULL,
+         event_type VARCHAR(50) NOT NULL,
+         status VARCHAR(50) NOT NULL,
+         amount DECIMAL(10,2) NOT NULL,
+         gateway_payload JSON NULL,
+         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+         INDEX idx_payment_events_order_id (order_id),
+         INDEX idx_payment_events_payment_id (payment_id),
+         CONSTRAINT fk_payment_events_order FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
+      )
+   `);
+}
+
 /* -------------------------
    START SERVER
 --------------------------*/
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+Promise.all([ensureWalletSchema(), ensurePaymentSchema()])
+   .then(() => {
+      app.listen(PORT, () => {
+         console.log(`Server running at http://localhost:${PORT}`);
+      });
+   })
+   .catch((err) => {
+      console.error("Failed to initialize database schema:", err);
+      process.exit(1);
+   });
