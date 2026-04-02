@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Status - MessMate</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1 class="title"><a href="landing.html" class="title-brand">MessMate</a></h1>
+
+    <div style="max-width: 700px; margin: 40px auto; padding: 0 20px;">
+        <div class="dashboard" style="text-align: center;">
+            <h2 id="statusTitle" style="margin-top: 0;">Checking Payment...</h2>
+            <p id="statusText" style="color: #7f8c8d;">Please wait while we verify your payment with PhonePe.</p>
+            <p id="orderInfo" style="font-weight: 600; color: #2c3e50;"></p>
+            <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                <button id="trackBtn" style="display:none; width:auto;" onclick="goToTrackOrder()">Track Order</button>
+                <button style="width:auto; background:#7f8c8d;" onclick="window.location.href='index.html'">Back to Messes</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="utils.js"></script>
+    <script>
+        let currentOrderId = null;
+
+        function goToTrackOrder() {
+            if (!currentOrderId) {
+                window.location.href = 'track-order.html';
+                return;
+            }
+            window.location.href = `track-order.html?id=${encodeURIComponent(currentOrderId)}`;
+        }
+
+        async function verifyPayment() {
+            const params = new URLSearchParams(window.location.search);
+            const orderId = params.get('order_id');
+            const txnId = params.get('txnid');
+
+            currentOrderId = orderId;
+
+            if (!orderId || !txnId) {
+                document.getElementById('statusTitle').textContent = 'Invalid Payment Return';
+                document.getElementById('statusText').textContent = 'Missing order details in redirect URL.';
+                return;
+            }
+
+            document.getElementById('orderInfo').textContent = `Order #${orderId}`;
+
+            try {
+                const response = await fetch('http://localhost:5000/api/payments/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        order_id: Number(orderId),
+                        payment_order_id: txnId
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Unable to verify payment');
+                }
+
+                const status = (result.payment_status || '').toLowerCase();
+                const titleEl = document.getElementById('statusTitle');
+                const textEl = document.getElementById('statusText');
+
+                if (status === 'paid') {
+                    titleEl.textContent = 'Payment Successful';
+                    titleEl.style.color = '#27ae60';
+                    textEl.textContent = 'Your PhonePe payment is confirmed and the order is placed.';
+                } else if (status === 'pending') {
+                    titleEl.textContent = 'Payment Pending';
+                    titleEl.style.color = '#f39c12';
+                    textEl.textContent = 'Your payment is still pending. Please wait and check again from track order.';
+                } else {
+                    titleEl.textContent = 'Payment Failed';
+                    titleEl.style.color = '#e74c3c';
+                    textEl.textContent = 'Payment could not be confirmed. If money is deducted, it is usually auto-reversed by the gateway.';
+                }
+
+                document.getElementById('trackBtn').style.display = 'inline-block';
+            } catch (error) {
+                document.getElementById('statusTitle').textContent = 'Verification Error';
+                document.getElementById('statusTitle').style.color = '#e74c3c';
+                document.getElementById('statusText').textContent = error.message || 'Unable to verify payment status right now.';
+                document.getElementById('trackBtn').style.display = 'inline-block';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', verifyPayment);
+    </script>
+</body>
+</html>

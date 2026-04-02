@@ -1,9 +1,40 @@
+require("dotenv").config();
+
+const fs = require("fs");
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const db = require("./config/db");
 
 const app = express();
 const PORT = 5000;
+
+function mapLegacyPhonePeEnvNames() {
+   const envPath = path.join(__dirname, ".env");
+   if (!fs.existsSync(envPath)) return;
+
+   const envText = fs.readFileSync(envPath, "utf8");
+   const findValue = (key) => {
+      const regex = new RegExp(`^\\s*${key}\\s*=\\s*(.+)\\s*$`, "mi");
+      const match = envText.match(regex);
+      return match ? match[1].trim() : "";
+   };
+
+   if (!process.env.PHONEPE_MERCHANT_ID) {
+      process.env.PHONEPE_MERCHANT_ID = findValue("Client Id");
+   }
+
+   if (!process.env.PHONEPE_SALT_KEY) {
+      process.env.PHONEPE_SALT_KEY = findValue("Client Secret");
+   }
+
+   if (!process.env.PHONEPE_SALT_INDEX) {
+      const legacyIndex = findValue("Key Index");
+      if (legacyIndex) process.env.PHONEPE_SALT_INDEX = legacyIndex;
+   }
+}
+
+mapLegacyPhonePeEnvNames();
 
 /* -------------------------
    MIDDLEWARE

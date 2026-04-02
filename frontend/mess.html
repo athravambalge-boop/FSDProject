@@ -36,6 +36,17 @@
             <input type="text" id="customerName" placeholder="Your Full Name" required>
             <input type="text" id="customerPhone" placeholder="Your Phone Number (10 digits)" required>
             <input type="email" id="customerEmail" placeholder="Your Email (optional)">
+            <div style="margin-top: 12px; padding: 12px; border: 1px solid #ecf0f1; border-radius: 8px; background: #fafafa;">
+                <p style="margin: 0 0 8px 0; font-weight: 600; color: #2c3e50;">Payment Method</p>
+                <label style="display: inline-flex; align-items: center; gap: 8px; margin-right: 20px; color: #2c3e50;">
+                    <input type="radio" name="paymentMethod" value="cash" checked>
+                    Cash at Counter
+                </label>
+                <label style="display: inline-flex; align-items: center; gap: 8px; color: #2c3e50;">
+                    <input type="radio" name="paymentMethod" value="online">
+                    PhonePe (Online)
+                </label>
+            </div>
             <button onclick="placeOrder()" style="background: linear-gradient(135deg, #27ae60, #2ecc71); margin-top: 15px;">
                 Book Food
             </button>
