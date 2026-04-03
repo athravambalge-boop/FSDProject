@@ -44,7 +44,7 @@
                     return;
                 }
 
-                const response = await fetch(`http://localhost:5000/api/orders/customer/${session.customer_phone}`);
+                const response = await fetch(apiUrl(`orders/customer/${session.customer_phone}`));
                 if (!response.ok) throw new Error('Failed to fetch orders');
 
                 const orders = await response.json();

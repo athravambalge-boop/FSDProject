@@ -13,9 +13,9 @@ async function loadMess(search = '', location = '', minPrice = '', maxPrice = ''
         if (maxPrice) params.append('maxPrice', maxPrice);
         if (minRating) params.append('minRating', minRating);
 
-        const url = params.toString() 
-            ? `http://localhost:5000/api/mess?${params.toString()}`
-            : `http://localhost:5000/api/mess`;
+        const url = params.toString()
+            ? apiUrl(`mess?${params.toString()}`)
+            : apiUrl("mess");
 
         const res = await fetch(url);
         if (!res.ok) {

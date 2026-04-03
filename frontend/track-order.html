@@ -186,7 +186,7 @@
             try {
                 showLoading();
 
-                const response = await fetch(`http://localhost:5000/api/orders/status/${orderId}`);
+                const response = await fetch(apiUrl(`orders/status/${orderId}`));
                 if (!response.ok) throw new Error('Order not found');
 
                 const order = await response.json();
@@ -256,7 +256,7 @@
             try {
                 showLoading();
 
-                const response = await fetch(`http://localhost:5000/api/orders/${currentOrder.order_id}/cancel`, {
+                const response = await fetch(apiUrl(`orders/${currentOrder.order_id}/cancel`), {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ customer_phone: currentOrder.customer_phone })

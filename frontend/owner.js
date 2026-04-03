@@ -23,7 +23,7 @@ const messName = localStorage.getItem("mess_name") || "My Mess";
 ======================== */
 async function loadStats() {
     try {
-        const res = await fetch(`http://localhost:5000/api/orders/${messId}/stats/overview`);
+        const res = await fetch(apiUrl(`orders/${messId}/stats/overview`));
         if (!res.ok) throw new Error('Failed to load stats');
 
         const stats = await res.json();
@@ -66,7 +66,7 @@ async function addItem() {
     try {
         showLoading();
 
-        const res = await fetch(`http://localhost:5000/api/menu/${messId}`, {
+        const res = await fetch(apiUrl(`menu/${messId}`), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ item_name, item_price: parseFloat(item_price), category })
@@ -107,7 +107,7 @@ async function addItem() {
 
 async function loadMenu() {
     try {
-        const res = await fetch(`http://localhost:5000/api/menu/${messId}?include_unavailable=1`);
+        const res = await fetch(apiUrl(`menu/${messId}?include_unavailable=1`));
         if (!res.ok) throw new Error('Failed to load menu');
         
         const items = await res.json();
@@ -157,7 +157,7 @@ async function toggleItemAvailability(itemId, currentAvailability) {
     const nextAvailability = currentAvailability ? 0 : 1;
 
     try {
-        const res = await fetch(`http://localhost:5000/api/menu/item/${itemId}`, {
+        const res = await fetch(apiUrl(`menu/item/${itemId}`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ is_available: nextAvailability })
@@ -185,7 +185,7 @@ async function deleteItem(itemId) {
     if (!confirm('Are you sure you want to delete this item?')) return;
 
     try {
-        const res = await fetch(`http://localhost:5000/api/menu/item/${itemId}`, {
+        const res = await fetch(apiUrl(`menu/item/${itemId}`), {
             method: "DELETE"
         });
         const data = await res.json();
@@ -211,7 +211,7 @@ async function loadOrders() {
         showLoading();
 
         const filter = document.getElementById('orderFilter')?.value || '';
-        let url = `http://localhost:5000/api/orders/${messId}`;
+        let url = apiUrl(`orders/${messId}`);
         if (filter) {
             url += `?status=${filter}`;
         }
@@ -318,7 +318,7 @@ async function updateOrderStatus(orderId) {
     try {
         showLoading();
 
-        const res = await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
+        const res = await fetch(apiUrl(`orders/${orderId}/status`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: newStatus, mess_id: messId })
@@ -357,7 +357,7 @@ async function cancelOrder(orderId, customerPhone) {
     try {
         showLoading();
 
-        const res = await fetch(`http://localhost:5000/api/orders/${orderId}/cancel`, {
+        const res = await fetch(apiUrl(`orders/${orderId}/cancel`), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ customer_phone: customerPhone })

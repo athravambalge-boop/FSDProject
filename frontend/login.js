@@ -20,7 +20,7 @@ async function login() {
         showLoading();
         errorDiv.classList.remove('show');
 
-        const res = await fetch("http://localhost:5000/api/auth/login", {
+        const res = await fetch(apiUrl("auth/login"), {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -85,7 +85,7 @@ async function login() {
         console.error("Login error:", error);
         hideLoading();
         const errorDiv = document.getElementById("error");
-        const errorMsg = "Unable to connect to server. Make sure backend is running on http://localhost:5000";
+        const errorMsg = `Unable to connect to server. Check backend URL: ${API_ORIGIN}`;
         errorDiv.textContent = errorMsg;
         errorDiv.classList.add('show');
         showToast(errorMsg, 'error');

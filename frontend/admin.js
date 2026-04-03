@@ -1,6 +1,6 @@
 async function loadMess(){
     try {
-        const res = await fetch("http://localhost:5000/api/mess");
+        const res = await fetch(apiUrl("mess"));
         if (!res.ok) {
             document.getElementById("messList").innerText = "Unable to load mess list";
             return;
@@ -47,7 +47,7 @@ async function addMess(){
         const veg_type = document.getElementById("veg_type").value;
         const contact_number = document.getElementById("contact_number").value;
 
-        const res = await fetch("http://localhost:5000/api/mess",{
+        const res = await fetch(apiUrl("mess"),{
             method:"POST",
             headers:{
                 "Content-Type":"application/json"
@@ -81,7 +81,7 @@ async function addMess(){
 /* DELETE MESS */
 
 async function deleteMess(id){
-    const res = await fetch(`http://localhost:5000/api/mess/${id}`,{
+    const res = await fetch(apiUrl(`mess/${id}`),{
         method:"DELETE"
     });
     if (!res.ok) {
@@ -95,7 +95,7 @@ loadMess();
 // Edit Modal Functions
 async function openEditModal(messId) {
     try {
-        const res = await fetch(`http://localhost:5000/api/mess/${messId}`);
+        const res = await fetch(apiUrl(`mess/${messId}`));
         if (!res.ok) {
             alert("Failed to load mess details");
             return;
@@ -131,7 +131,7 @@ async function saveEditMess() {
         const contact_number = document.getElementById("editContact").value;
         const rating = document.getElementById("editRating").value;
 
-        const res = await fetch(`http://localhost:5000/api/mess/${messId}`, {
+        const res = await fetch(apiUrl(`mess/${messId}`), {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json"

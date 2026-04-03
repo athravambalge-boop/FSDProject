@@ -100,7 +100,27 @@ function formatPhone(phone) {
    API HELPERS
 ======================== */
 
-const API_BASE = "http://localhost:5000/api";
+const API_ORIGIN = (() => {
+    const override = window.API_ORIGIN || localStorage.getItem('api_origin');
+    if (override) {
+        return String(override).replace(/\/+$/, '');
+    }
+
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+        return 'http://localhost:5000';
+    }
+
+    // Set localStorage.setItem('api_origin', 'https://your-backend-domain.com') after deploying backend.
+    return 'https://your-backend-domain.com';
+})();
+
+const API_BASE = `${API_ORIGIN}/api`;
+
+function apiUrl(path = '') {
+    const cleanPath = String(path).replace(/^\/+/, '');
+    return cleanPath ? `${API_BASE}/${cleanPath}` : API_BASE;
+}
 
 async function apiCall(endpoint, method = 'GET', data = null) {
     try {
@@ -115,7 +135,8 @@ async function apiCall(endpoint, method = 'GET', data = null) {
             options.body = JSON.stringify(data);
         }
 
-        const response = await fetch(`${API_BASE}${endpoint}`, options);
+        const path = String(endpoint).replace(/^\/+/, '');
+        const response = await fetch(apiUrl(path), options);
         const result = await response.json();
 
         if (!response.ok) {

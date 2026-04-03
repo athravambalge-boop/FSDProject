@@ -11,7 +11,7 @@ function getSelectedPaymentMethod() {
 }
 
 async function initiateOnlinePayment(orderId) {
-  const response = await fetch("http://localhost:5000/api/payments/create-order", {
+  const response = await fetch(apiUrl("payments/create-order"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ order_id: orderId })
@@ -113,14 +113,14 @@ async function loadMenu() {
       return;
     }
 
-    const messRes = await fetch(`http://localhost:5000/api/mess/${messId}`);
+    const messRes = await fetch(apiUrl(`mess/${messId}`));
     if (!messRes.ok) throw new Error("Failed to load mess");
 
     const mess = await messRes.json();
     messName = mess.name;
     document.getElementById("messTitle").innerText = `Choose Order · ${mess.name}`;
 
-    const res = await fetch(`http://localhost:5000/api/menu/${messId}`);
+    const res = await fetch(apiUrl(`menu/${messId}`));
     if (!res.ok) throw new Error("Failed to load menu");
 
     const items = await res.json();
@@ -146,7 +146,7 @@ async function loadMenu() {
     document.getElementById("menuContainer").innerHTML = `
       <div class="dashboard" style="text-align:center;">
         <p style="color:#e74c3c; font-weight: 600;">Unable to load menu</p>
-        <p style="color:#7f8c8d; font-size: 14px;">Make sure backend is running on http://localhost:5000</p>
+        <p style="color:#7f8c8d; font-size: 14px;">Check backend URL: ${API_ORIGIN}</p>
         <button style="width: auto; margin-top: 15px; background: #667eea;" onclick="loadMenu()">Retry</button>
         <button style="width: auto; margin-top: 10px; background: #7f8c8d;" onclick="window.history.back()">Go Back</button>
       </div>`;
@@ -214,7 +214,7 @@ async function placeOrder() {
   try {
     showLoading();
 
-    const res = await fetch("http://localhost:5000/api/orders/place", {
+    const res = await fetch(apiUrl("orders/place"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -7,7 +7,26 @@ const cors = require("cors");
 const db = require("./config/db");
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
+
+function buildAllowedOrigins() {
+   const defaults = [
+      "http://localhost:5500",
+      "http://127.0.0.1:5500",
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+      "https://athravambalge-boop.github.io"
+   ];
+
+   const extra = (process.env.ALLOWED_ORIGINS || "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+   return [...new Set([...defaults, ...extra])];
+}
+
+const allowedOrigins = buildAllowedOrigins();
 
 function mapLegacyPhonePeEnvNames() {
    const envPath = path.join(__dirname, ".env");
@@ -39,9 +58,16 @@ mapLegacyPhonePeEnvNames();
 /* -------------------------
    MIDDLEWARE
 --------------------------*/
-app.use(cors({
-  origin: ["http://localhost:5500", "http://127.0.0.1:5500"]
-}));
+app.use(
+   cors({
+      origin(origin, callback) {
+         // Allow same-origin or non-browser clients that do not send Origin.
+         if (!origin) return callback(null, true);
+         if (allowedOrigins.includes(origin)) return callback(null, true);
+         return callback(new Error("Not allowed by CORS"));
+      }
+   })
+);
 
 app.use(express.json());
 

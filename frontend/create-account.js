@@ -80,7 +80,7 @@ async function requestOtp() {
         showLoading();
         requestButton.disabled = true;
 
-        const response = await fetch('http://localhost:5000/api/auth/request-signup-otp', {
+        const response = await fetch(apiUrl('auth/request-signup-otp'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -118,7 +118,7 @@ async function requestOtp() {
         console.error('OTP request error:', error);
         hideLoading();
         requestButton.disabled = false;
-        showError('Unable to connect to the backend. Make sure it is running on http://localhost:5000.');
+        showError(`Unable to connect to the backend. Check backend URL: ${API_ORIGIN}`);
         showToast('Backend connection failed.', 'error');
     }
 }
@@ -136,7 +136,7 @@ async function verifyOtp() {
     try {
         showLoading();
 
-        const response = await fetch('http://localhost:5000/api/auth/verify-signup-otp', {
+        const response = await fetch(apiUrl('auth/verify-signup-otp'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -175,7 +175,7 @@ async function verifyOtp() {
     } catch (error) {
         console.error('OTP verification error:', error);
         hideLoading();
-        showError('Unable to connect to the backend. Make sure it is running on http://localhost:5000.');
+        showError(`Unable to connect to the backend. Check backend URL: ${API_ORIGIN}`);
         showToast('Backend connection failed.', 'error');
     }
 }
