@@ -17,9 +17,9 @@ const PAYMENT_PROVIDER = (process.env.PAYMENT_PROVIDER || "phonepe").toLowerCase
 const APP_BASE_URL = process.env.APP_BASE_URL || "http://127.0.0.1:5500";
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || "http://localhost:5000";
 
-const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID || "";
-const PHONEPE_SALT_KEY = process.env.PHONEPE_SALT_KEY || "";
-const PHONEPE_SALT_INDEX = process.env.PHONEPE_SALT_INDEX || "1";
+const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID || process.env["Client Id"] || "M2361ZDEHB3QP_2604022056";
+const PHONEPE_SALT_KEY = process.env.PHONEPE_SALT_KEY || process.env["Client Secret"] || "N2Y4OWIyZmQtOTczOS00YWNlLWI5NGYtZGY0MGJhN2UxZmRh";
+const PHONEPE_SALT_INDEX = process.env.PHONEPE_SALT_INDEX || process.env["Key Index"] || "1";
 const PHONEPE_ENV = (process.env.PHONEPE_ENV || "sandbox").toLowerCase();
 
 const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || "";
@@ -125,7 +125,7 @@ async function createPhonePeOrder(order) {
         status: 500,
         body: {
           error: "PhonePe is not configured",
-          details: "Set PHONEPE_MERCHANT_ID, PHONEPE_SALT_KEY and PHONEPE_SALT_INDEX"
+          details: "Set Client Id, Client Secret and Key Index in .env file"
         }
       }
     };

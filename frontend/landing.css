@@ -108,6 +108,17 @@ main {
     animation: rise 0.75s ease-out;
 }
 
+.hero-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+    gap: 28px;
+    align-items: center;
+}
+
+.hero-copy {
+    min-width: 0;
+}
+
 .eyebrow {
     margin: 0;
     text-transform: uppercase;
@@ -123,6 +134,40 @@ main {
     font-size: clamp(2rem, 6vw, 3.95rem);
     line-height: 1.03;
     max-width: 14ch;
+}
+
+.hero-logo-panel {
+    min-height: 360px;
+    display: grid;
+    grid-template-rows: 1fr 1fr;
+    gap: clamp(14px, 2.4vw, 22px);
+}
+
+.hero-logo-card {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(19, 35, 28, 0.1);
+    border-radius: 24px;
+    padding: clamp(16px, 2.5vw, 24px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 14px 30px rgba(21, 42, 33, 0.08);
+}
+
+.hero-logo {
+    width: min(100%, 360px);
+    max-height: 250px;
+    object-fit: contain;
+    filter: drop-shadow(0 14px 24px rgba(19, 35, 28, 0.12));
+}
+
+.hero-logo-trust {
+    width: min(100%, 360px);
+    max-height: 250px;
+}
+
+.hero-logo-card-trust .hero-logo-trust {
+    transform: translateY(-8px);
 }
 
 .subtitle {
@@ -428,6 +473,14 @@ main {
 }
 
 @media (max-width: 950px) {
+    .hero-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-logo-panel {
+        min-height: 0;
+    }
+
     .hero-metrics,
     .features,
     .about-grid,
@@ -448,6 +501,10 @@ main {
 }
 
 @media (max-width: 600px) {
+    .hero-logo-panel {
+        grid-template-rows: auto;
+    }
+
     .btn {
         width: 100%;
     }

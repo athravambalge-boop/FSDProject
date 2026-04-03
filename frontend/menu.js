@@ -7,7 +7,7 @@ let lastOrderPhone = "";
 
 function getSelectedPaymentMethod() {
   const selected = document.querySelector('input[name="paymentMethod"]:checked');
-  return selected ? selected.value : "cash";
+  return selected ? selected.value : "online";
 }
 
 async function initiateOnlinePayment(orderId) {
@@ -206,7 +206,7 @@ async function placeOrder() {
   if (cartItems.length === 0) return showToast("Please add items to your order", "warning");
 
   const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const paymentLabel = selectedPaymentMethod === "online" ? "PhonePe (Online)" : "Cash at Counter";
+  const paymentLabel = "PhonePe (Online)";
 
   const confirmed = confirm(`Order Summary:\n\nMess: ${messName}\nTotal Amount: Rs.${total}\nPayment: ${paymentLabel}\n\nConfirm order?`);
   if (!confirmed) return;
@@ -223,7 +223,7 @@ async function placeOrder() {
         customer_phone,
         customer_email,
         items: cartItems,
-        payment_method: selectedPaymentMethod
+        payment_method: "online"
       })
     });
 
@@ -238,20 +238,9 @@ async function placeOrder() {
     lastOrderPhone = customer_phone;
     saveUserSession("visitor", null, customer_phone, customer_name);
 
-    if (selectedPaymentMethod === "online") {
-      showToast("Redirecting to PhonePe...", "info");
-      await initiateOnlinePayment(orderId);
-      return;
-    }
-
-    hideLoading();
-
-    document.getElementById("orderId").innerText = `#${orderId}`;
-    document.getElementById("orderTotal").innerText = `Total Paid: ${formatCurrency(data.total_amount)}`;
-    document.getElementById("orderWalletInfo").innerText = "Status: Order Booked";
-    document.getElementById("successModal").style.display = "flex";
-
-    showToast("Order placed successfully!", "success");
+    showToast("Redirecting to PhonePe...", "info");
+    await initiateOnlinePayment(orderId);
+    return;
 
     Object.keys(cart).forEach(key => {
       cart[key].quantity = 0;

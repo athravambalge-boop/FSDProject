@@ -20,17 +20,17 @@ function mapLegacyPhonePeEnvNames() {
       return match ? match[1].trim() : "";
    };
 
-   if (!process.env.PHONEPE_MERCHANT_ID) {
-      process.env.PHONEPE_MERCHANT_ID = findValue("Client Id");
+   if (!process.env["Client Id"]) {
+      process.env["Client Id"] = findValue("PHONEPE_MERCHANT_ID");
    }
 
-   if (!process.env.PHONEPE_SALT_KEY) {
-      process.env.PHONEPE_SALT_KEY = findValue("Client Secret");
+   if (!process.env["Client Secret"]) {
+      process.env["Client Secret"] = findValue("PHONEPE_SALT_KEY");
    }
 
-   if (!process.env.PHONEPE_SALT_INDEX) {
-      const legacyIndex = findValue("Key Index");
-      if (legacyIndex) process.env.PHONEPE_SALT_INDEX = legacyIndex;
+   if (!process.env["Key Index"]) {
+      const legacyIndex = findValue("PHONEPE_SALT_INDEX");
+      if (legacyIndex) process.env["Key Index"] = legacyIndex;
    }
 }
 
