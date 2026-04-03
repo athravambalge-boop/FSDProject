@@ -313,6 +313,7 @@ function logout() {
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!NEEDS_BACKEND_CONFIG) return;
+    if (document.body.dataset.showBackendConfig !== 'true') return;
     if (document.getElementById('setBackendUrlBtn')) return;
 
     const btn = document.createElement('button');

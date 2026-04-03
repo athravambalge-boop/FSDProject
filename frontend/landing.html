@@ -15,7 +15,6 @@
         <nav class="top-nav">
             <a href="create-account.html">Sign Up</a>
             <a href="login.html">Login</a>
-            <a href="login.html">Owner Portal</a>
         </nav>
     </header>
 
@@ -121,113 +120,12 @@
             </div>
         </section>
 
-        <section class="contact" aria-label="Get in touch">
-            <h2>Get in Touch</h2>
-            <p class="contact-subtitle">Reach us directly for support, collaboration, or onboarding help.</p>
-
-            <div class="contact-grid">
-                <article class="contact-card">
-                    <h3>Contact Us</h3>
-                    <p>
-                        <a href="tel:7276084388">(+91)7276084388</a><br>
-                        <a href="tel:9322189377">(+91)9322189377</a>
-                    </p>
-                    <p>
-                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=athravambalge@gmail.com" target="_blank" rel="noopener noreferrer">athravambalge@gmail.com</a><br>
-                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=adityamore1705@gmail.com" target="_blank" rel="noopener noreferrer">adityamore1705@gmail.com</a>
-                    </p>
-                </article>
-
-                <article class="contact-card">
-                    <h3>Founder 1 Socials</h3>
-                    <p class="social-links">
-                        <a href="https://www.linkedin.com/in/atharva-ambalge-69ab14328/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-                        <a href="https://github.com/athravambalge-boop" target="_blank" rel="noopener noreferrer">GitHub</a>
-                    </p>
-                </article>
-
-                <article class="contact-card">
-                    <h3>Founder 2 Socials</h3>
-                    <p class="social-links">
-                        <a href="https://www.linkedin.com/in/aditya-more-992bb326a" target="_blank" rel="noopener noreferrer">LinkedIn</a>
-                        <a href="https://github.com/adityamore1705-cyber" target="_blank" rel="noopener noreferrer">GitHub</a>
-                    </p>
-                </article>
-            </div>
-        </section>
     </main>
 
     <footer class="site-footer">
         <p>Pccoe Campus Bites keeps campus meals predictable, affordable, and stress-free.</p>
     </footer>
 
-    <button
-        id="setBackendUrlBtn"
-        type="button"
-        style="position:fixed; right:16px; bottom:16px; z-index:9999; width:auto; padding:10px 14px; border:none; border-radius:999px; cursor:pointer; color:#fff; background:linear-gradient(135deg, #d35400, #e67e22); box-shadow:0 8px 20px rgba(0,0,0,0.2);"
-    >
-        Set Backend URL
-    </button>
-
-    <div id="backendConfigPanel" style="display:none; position:fixed; right:16px; bottom:70px; z-index:10000; width:min(92vw, 340px); background:#fff; color:#2c3e50; border-radius:12px; box-shadow:0 16px 40px rgba(0,0,0,0.22); padding:14px;">
-        <p style="margin:0 0 8px 0; font-weight:700;">Backend URL</p>
-        <p style="margin:0 0 10px 0; font-size:12px; color:#667085;">Example: https://your-backend.onrender.com</p>
-        <input id="backendUrlInput" type="text" placeholder="https://your-backend.onrender.com" style="width:100%; padding:10px; border:1px solid #d0d5dd; border-radius:8px; box-sizing:border-box;">
-        <div style="display:flex; gap:8px; margin-top:10px;">
-            <button id="saveBackendUrlBtn" type="button" style="flex:1; width:auto; padding:9px 10px; border:none; border-radius:8px; color:#fff; background:#16a34a; cursor:pointer;">Save</button>
-            <button id="cancelBackendUrlBtn" type="button" style="width:auto; padding:9px 10px; border:none; border-radius:8px; color:#fff; background:#6b7280; cursor:pointer;">Close</button>
-        </div>
-    </div>
-
     <script src="utils.js"></script>
-    <script>
-        (function () {
-            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const btn = document.getElementById('setBackendUrlBtn');
-            const panel = document.getElementById('backendConfigPanel');
-            const input = document.getElementById('backendUrlInput');
-            const saveBtn = document.getElementById('saveBackendUrlBtn');
-            const cancelBtn = document.getElementById('cancelBackendUrlBtn');
-
-            if (!btn || !panel || !input || !saveBtn || !cancelBtn) return;
-
-            if (isLocal) {
-                btn.style.display = 'none';
-                return;
-            }
-
-            btn.addEventListener('click', function () {
-                const current = localStorage.getItem('api_origin') || '';
-                input.value = current;
-                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-                if (panel.style.display === 'block') {
-                    input.focus();
-                    input.select();
-                }
-            });
-
-            cancelBtn.addEventListener('click', function () {
-                panel.style.display = 'none';
-            });
-
-            saveBtn.addEventListener('click', function () {
-                const value = (input.value || '').trim();
-                if (!value) {
-                    alert('Please enter a backend URL.');
-                    return;
-                }
-
-                const normalized = (window.normalizeApiOrigin && window.normalizeApiOrigin(value)) || value;
-                if (!normalized || !/^https?:\/\//i.test(normalized)) {
-                    alert('Please enter a valid URL, for example https://your-backend.onrender.com');
-                    return;
-                }
-
-                localStorage.setItem('api_origin', normalized.replace(/\/+$/, ''));
-                panel.style.display = 'none';
-                window.location.reload();
-            });
-        })();
-    </script>
 </body>
 </html>

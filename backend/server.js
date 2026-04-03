@@ -86,9 +86,6 @@ app.use("/api/menu", menuRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
 
-/* -------------------------
-   TEST ROUTE
---------------------------*/
 app.get("/", (req, res) => {
   res.send("Backend running successfully");
 });
