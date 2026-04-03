@@ -160,5 +160,22 @@
     <footer class="site-footer">
         <p>Pccoe Campus Bites keeps campus meals predictable, affordable, and stress-free.</p>
     </footer>
+
+    <button
+        id="setBackendUrlBtn"
+        type="button"
+        onclick="window.setBackendApiOrigin && window.setBackendApiOrigin()"
+        style="position:fixed; right:16px; bottom:16px; z-index:9999; width:auto; padding:10px 14px; border:none; border-radius:999px; cursor:pointer; color:#fff; background:linear-gradient(135deg, #d35400, #e67e22); box-shadow:0 8px 20px rgba(0,0,0,0.2);"
+    >
+        Set Backend URL
+    </button>
+
+    <script src="utils.js"></script>
+    <script>
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            const btn = document.getElementById('setBackendUrlBtn');
+            if (btn) btn.style.display = 'none';
+        }
+    </script>
 </body>
 </html>
