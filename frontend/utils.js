@@ -115,12 +115,49 @@ const API_ORIGIN = (() => {
     return 'https://your-backend-domain.com';
 })();
 
+const IS_PLACEHOLDER_API = API_ORIGIN.includes('your-backend-domain.com');
+
 const API_BASE = `${API_ORIGIN}/api`;
 
 function apiUrl(path = '') {
     const cleanPath = String(path).replace(/^\/+/, '');
     return cleanPath ? `${API_BASE}/${cleanPath}` : API_BASE;
 }
+
+function normalizeApiOrigin(input) {
+    if (!input) return '';
+    let value = String(input).trim();
+
+    if (!/^https?:\/\//i.test(value)) {
+        value = `https://${value}`;
+    }
+
+    try {
+        const url = new URL(value);
+        return `${url.protocol}//${url.host}`;
+    } catch (error) {
+        return '';
+    }
+}
+
+function setBackendOriginFromPrompt() {
+    const current = localStorage.getItem('api_origin') || '';
+    const suggested = current || (IS_PLACEHOLDER_API ? '' : API_ORIGIN);
+    const entered = window.prompt('Enter backend URL (example: https://your-backend.onrender.com)', suggested);
+
+    if (entered === null) return;
+
+    const normalized = normalizeApiOrigin(entered);
+    if (!normalized) {
+        alert('Invalid URL. Please enter a valid backend domain URL.');
+        return;
+    }
+
+    localStorage.setItem('api_origin', normalized);
+    window.location.reload();
+}
+
+window.setBackendApiOrigin = setBackendOriginFromPrompt;
 
 async function apiCall(endpoint, method = 'GET', data = null) {
     try {
@@ -260,3 +297,32 @@ function logout() {
         window.location.href = 'login.html';
     }, 500);
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!IS_PLACEHOLDER_API) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Set Backend URL';
+    btn.style.position = 'fixed';
+    btn.style.right = '16px';
+    btn.style.bottom = '16px';
+    btn.style.zIndex = '9999';
+    btn.style.width = 'auto';
+    btn.style.padding = '10px 14px';
+    btn.style.border = 'none';
+    btn.style.borderRadius = '999px';
+    btn.style.cursor = 'pointer';
+    btn.style.color = '#fff';
+    btn.style.background = 'linear-gradient(135deg, #d35400, #e67e22)';
+    btn.style.boxShadow = '0 8px 20px rgba(0,0,0,0.2)';
+    btn.onclick = setBackendOriginFromPrompt;
+
+    document.body.appendChild(btn);
+
+    // Show once per tab session to avoid repetitive alerts.
+    if (!sessionStorage.getItem('api_origin_notice_shown')) {
+        showToast('Backend URL not configured. Use "Set Backend URL".', 'warning', 6000);
+        sessionStorage.setItem('api_origin_notice_shown', '1');
+    }
+});
