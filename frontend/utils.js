@@ -133,11 +133,13 @@ async function apiCall(endpoint, method = 'GET', data = null) {
    LOCAL STORAGE HELPERS
 ======================== */
 
-function saveUserSession(role, messId = null, phone = null, name = null) {
+function saveUserSession(role, messId = null, phone = null, name = null, email = null, contact = null) {
     localStorage.setItem('role', role);
     if (messId !== null) localStorage.setItem('mess_id', messId);
     if (phone !== null) localStorage.setItem('customer_phone', phone);
     if (name !== null) localStorage.setItem('customer_name', name);
+    if (email !== null) localStorage.setItem('customer_email', email);
+    if (contact !== null) localStorage.setItem('customer_contact', contact);
 }
 
 function getUserSession() {
@@ -145,7 +147,9 @@ function getUserSession() {
         role: localStorage.getItem('role'),
         mess_id: localStorage.getItem('mess_id'),
         customer_phone: localStorage.getItem('customer_phone'),
-        customer_name: localStorage.getItem('customer_name')
+        customer_name: localStorage.getItem('customer_name'),
+        customer_email: localStorage.getItem('customer_email'),
+        customer_contact: localStorage.getItem('customer_contact') || localStorage.getItem('customer_phone') || localStorage.getItem('customer_email')
     };
 }
 
@@ -154,10 +158,26 @@ function clearUserSession() {
     localStorage.removeItem('mess_id');
     localStorage.removeItem('customer_phone');
     localStorage.removeItem('customer_name');
+    localStorage.removeItem('customer_email');
+    localStorage.removeItem('customer_contact');
 }
 
 function isLoggedIn() {
     return !!localStorage.getItem('role');
+}
+
+function saveVisitorAccount(account) {
+    localStorage.setItem('saved_visitor_account', JSON.stringify(account));
+}
+
+function getSavedVisitorAccount() {
+    try {
+        const raw = localStorage.getItem('saved_visitor_account');
+        return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+        console.error('Unable to parse saved visitor account:', error);
+        return null;
+    }
 }
 
 /* ========================

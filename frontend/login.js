@@ -52,7 +52,9 @@ async function login() {
             data.role,
             data.mess_id || null,
             data.phone || null,
-            data.username || username
+            data.username || username,
+            data.email || null,
+            data.contact || data.phone || data.email || data.username || username
         );
 
         // Store additional info

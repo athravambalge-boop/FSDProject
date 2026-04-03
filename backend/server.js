@@ -172,10 +172,65 @@ async function ensurePaymentSchema() {
    `);
 }
 
+async function ensureAuthSchema() {
+   async function addColumnIfMissing(tableName, columnName, definition) {
+      const [rows] = await db.query(
+         `SELECT 1
+          FROM information_schema.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = ?
+            AND COLUMN_NAME = ?
+          LIMIT 1`,
+         [tableName, columnName]
+      );
+
+      if (rows.length === 0) {
+         await db.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+      }
+   }
+
+   async function addIndexIfMissing(tableName, indexName, indexSql) {
+      const [rows] = await db.query(
+         `SELECT 1
+          FROM information_schema.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = ?
+            AND INDEX_NAME = ?
+          LIMIT 1`,
+         [tableName, indexName]
+      );
+
+      if (rows.length === 0) {
+         await db.query(`ALTER TABLE ${tableName} ADD INDEX ${indexName} (${indexSql})`);
+      }
+   }
+
+   await addColumnIfMissing("users", "phone", "VARCHAR(20) NULL");
+   await addColumnIfMissing("users", "email", "VARCHAR(150) NULL");
+   await addIndexIfMissing("users", "idx_users_phone", "phone");
+   await addIndexIfMissing("users", "idx_users_email", "email");
+
+   await db.query(`
+      CREATE TABLE IF NOT EXISTS visitor_otps (
+         otp_id INT AUTO_INCREMENT PRIMARY KEY,
+         full_name VARCHAR(100) NOT NULL,
+         identifier VARCHAR(150) NOT NULL,
+         contact_type ENUM('phone', 'email') NOT NULL,
+         otp_code VARCHAR(6) NOT NULL,
+         expires_at DATETIME NOT NULL,
+         consumed_at DATETIME NULL,
+         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+         INDEX idx_visitor_otps_identifier (identifier),
+         INDEX idx_visitor_otps_contact_type (contact_type),
+         INDEX idx_visitor_otps_expires_at (expires_at)
+      )
+   `);
+}
+
 /* -------------------------
    START SERVER
 --------------------------*/
-Promise.all([ensureWalletSchema(), ensurePaymentSchema()])
+Promise.all([ensureWalletSchema(), ensurePaymentSchema(), ensureAuthSchema()])
    .then(() => {
       app.listen(PORT, () => {
          console.log(`Server running at http://localhost:${PORT}`);

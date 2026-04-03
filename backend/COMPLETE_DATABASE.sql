@@ -15,10 +15,13 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     phone VARCHAR(20),
+    email VARCHAR(150),
     role ENUM('admin', 'owner', 'visitor') DEFAULT 'visitor',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_username (username),
+    INDEX idx_users_phone (phone),
+    INDEX idx_users_email (email),
     INDEX idx_role (role)
 );
 
@@ -191,6 +194,23 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 
 -- ============================================================
+-- 11. VISITOR_OTPS TABLE (For OTP-based visitor signup)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS visitor_otps (
+    otp_id INT AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(100) NOT NULL,
+    identifier VARCHAR(150) NOT NULL,
+    contact_type ENUM('phone', 'email') NOT NULL,
+    otp_code VARCHAR(6) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    consumed_at DATETIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_visitor_otps_identifier (identifier),
+    INDEX idx_visitor_otps_contact_type (contact_type),
+    INDEX idx_visitor_otps_expires_at (expires_at)
+);
+
+-- ============================================================
 -- INSERT SAMPLE DATA
 -- ============================================================
 
@@ -233,3 +253,4 @@ DESCRIBE payment_events;
 DESCRIBE favorites;
 DESCRIBE promos;
 DESCRIBE reviews;
+DESCRIBE visitor_otps;

@@ -118,10 +118,10 @@ function initializeUserBar() {
         userInfo.style.display = 'flex';
         logoutBtn.style.display = 'block';
         loginLink.style.display = 'none';
-        userLinks.style.display = 'block';
+        userLinks.style.display = session.customer_phone ? 'block' : 'none';
 
         document.getElementById('userName').textContent = `Hi ${session.customer_name}!`;
-        document.getElementById('userPhone').textContent = session.customer_phone || '';
+        document.getElementById('userPhone').textContent = session.customer_contact || session.customer_phone || session.customer_email || '';
     }
 }
 

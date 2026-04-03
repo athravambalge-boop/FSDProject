@@ -3,21 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - MessMate</title>
+    <title>Login - Pccoe Campus Bites</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1 class="title"><a href="landing.html" class="title-brand">MessMate 🍽️</a></h1>
+    <h1 class="title"><a href="landing.html" class="title-brand">Pccoe Campus Bites</a></h1>
     
     <div class="login-container">
         <h2>Login</h2>
+        <p class="auth-subtitle">Use your username and password for owner access.</p>
         <p id="error"></p>
         <input type="text" id="username" placeholder="Username" required>
         <input type="password" id="password" placeholder="Password" required>
         <button onclick="login()">Login</button>
+        <p class="auth-footer-link">
+            New student visitor? <a href="create-account.html">Create your account with OTP</a>
+        </p>
     </div>
 
     <script src="utils.js"></script>
     <script src="login.js"></script>
 </body>
 </html>
+
