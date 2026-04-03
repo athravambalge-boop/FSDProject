@@ -100,14 +100,24 @@ function formatPhone(phone) {
    API HELPERS
 ======================== */
 
+const IS_LOCAL_HOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+function isLoopbackOrigin(url) {
+    return /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(String(url || ''));
+}
+
 const API_ORIGIN = (() => {
     const override = window.API_ORIGIN || localStorage.getItem('api_origin');
     if (override) {
-        return String(override).replace(/\/+$/, '');
+        const cleaned = String(override).replace(/\/+$/, '');
+        // Prevent deployed frontend from being pinned to localhost by mistake.
+        if (!IS_LOCAL_HOST && isLoopbackOrigin(cleaned)) {
+            return 'https://your-backend-domain.com';
+        }
+        return cleaned;
     }
 
-    const host = window.location.hostname;
-    if (host === 'localhost' || host === '127.0.0.1') {
+    if (IS_LOCAL_HOST) {
         return 'http://localhost:5000';
     }
 
@@ -116,6 +126,7 @@ const API_ORIGIN = (() => {
 })();
 
 const IS_PLACEHOLDER_API = API_ORIGIN.includes('your-backend-domain.com');
+const NEEDS_BACKEND_CONFIG = !IS_LOCAL_HOST && (IS_PLACEHOLDER_API || isLoopbackOrigin(API_ORIGIN));
 
 const API_BASE = `${API_ORIGIN}/api`;
 
@@ -301,7 +312,7 @@ function logout() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    if (!IS_PLACEHOLDER_API) return;
+    if (!NEEDS_BACKEND_CONFIG) return;
     if (document.getElementById('setBackendUrlBtn')) return;
 
     const btn = document.createElement('button');
