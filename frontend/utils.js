@@ -140,6 +140,8 @@ function normalizeApiOrigin(input) {
     }
 }
 
+window.normalizeApiOrigin = normalizeApiOrigin;
+
 function setBackendOriginFromPrompt() {
     const current = localStorage.getItem('api_origin') || '';
     const suggested = current || (IS_PLACEHOLDER_API ? '' : API_ORIGIN);
@@ -300,6 +302,7 @@ function logout() {
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!IS_PLACEHOLDER_API) return;
+    if (document.getElementById('setBackendUrlBtn')) return;
 
     const btn = document.createElement('button');
     btn.type = 'button';
