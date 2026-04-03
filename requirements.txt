@@ -1,0 +1,4 @@
+# No Python dependencies are required for this repository.
+# The application is built with Node.js; install backend packages with:
+#   cd backend
+#   npm install
