@@ -20,6 +20,11 @@ function toMoney(value) {
   return Number(parseFloat(value).toFixed(2));
 }
 
+function generatePaymentReference(orderId) {
+  const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `MM-${orderId}-${suffix}`;
+}
+
 /* ========================
    PLACE ORDER WITH VALIDATION
 ======================== */
@@ -134,12 +139,14 @@ router.post("/place", async (req, res) => {
     const cashbackEarned = toMoney(payableAmount * (CASHBACK_PERCENT / 100));
     const initialPaymentStatus = selectedPaymentMethod === 'cash' ? 'pending' : 'pending';
 
-    // Insert order
+     const initialProofStatus = selectedPaymentMethod === 'online' ? 'not_uploaded' : 'not_uploaded';
+
+     // Insert order
     const [result] = await connection.query(
       `INSERT INTO orders (
           mess_id, customer_name, customer_phone, customer_email, items,
-          total_amount, wallet_used, cashback_earned, status, payment_method, payment_status, special_instructions
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
+         total_amount, wallet_used, cashback_earned, status, payment_method, payment_status, payment_proof_status, special_instructions
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
       [
         mess_id,
         customer_name.trim(),
@@ -151,9 +158,21 @@ router.post("/place", async (req, res) => {
         cashbackEarned,
         selectedPaymentMethod,
         initialPaymentStatus,
+        initialProofStatus,
         special_instructions || null
       ]
     );
+
+    let paymentReference = null;
+    if (selectedPaymentMethod === 'online') {
+      paymentReference = generatePaymentReference(result.insertId);
+      await connection.query(
+        `UPDATE orders
+         SET payment_reference = ?, payment_order_id = ?, payment_provider = 'manual_qr'
+         WHERE order_id = ?`,
+        [paymentReference, paymentReference, result.insertId]
+      );
+    }
 
     if (walletUsed > 0) {
       await connection.query(
@@ -189,6 +208,7 @@ router.post("/place", async (req, res) => {
       message: "Order placed successfully",
       order_id: result.insertId,
       total_amount: payableAmount,
+      payment_reference: paymentReference,
       wallet_used: walletUsed,
       cashback_earned: cashbackEarned,
       wallet_balance: updatedWalletBalance,
@@ -216,7 +236,7 @@ router.post("/place", async (req, res) => {
 router.get("/status/:order_id", async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT order_id, customer_name, customer_phone, mess_id, total_amount, status, payment_method, payment_status, items, created_at, updated_at 
+      `SELECT order_id, customer_name, customer_phone, mess_id, total_amount, status, payment_method, payment_status, payment_reference, payment_proof_status, payment_proof_image, items, created_at, updated_at 
        FROM orders WHERE order_id = ?`,
       [req.params.order_id]
     );
@@ -244,7 +264,7 @@ router.get("/customer/:phone", async (req, res) => {
     }
 
     const [rows] = await db.query(
-      `SELECT order_id, mess_id, customer_name, total_amount, wallet_used, cashback_earned, status, payment_method, payment_status, items, created_at, updated_at 
+      `SELECT order_id, mess_id, customer_name, total_amount, wallet_used, cashback_earned, status, payment_method, payment_status, payment_reference, payment_proof_status, payment_proof_image, items, created_at, updated_at 
        FROM orders WHERE customer_phone = ? ORDER BY created_at DESC LIMIT 20`,
       [phone]
     );
@@ -505,6 +525,64 @@ router.put("/:order_id/cancel", async (req, res) => {
   } catch (err) {
     console.error("Error cancelling order:", err);
     res.status(500).json({ error: "Failed to cancel order" });
+  }
+});
+
+/* ========================
+   CONFIRM ORDER AFTER PAYMENT SHARE
+======================== */
+router.post("/confirm-after-share/:order_id", async (req, res) => {
+  try {
+    const { order_id } = req.params;
+    const { customer_phone } = req.body;
+
+    if (!order_id) {
+      return res.status(400).json({ error: "Order ID is required" });
+    }
+
+    if (!validatePhone(customer_phone)) {
+      return res.status(400).json({ error: "Invalid phone number" });
+    }
+
+    const [orders] = await db.query(
+      `SELECT order_id, status FROM orders WHERE order_id = ? AND customer_phone = ?`,
+      [order_id, customer_phone]
+    );
+
+    if (orders.length === 0) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    const order = orders[0];
+
+    // Idempotent behavior: if already confirmed, treat as success.
+    if (order.status === "confirmed") {
+      return res.json({
+        message: "Order already confirmed",
+        order_id: order_id,
+        status: "confirmed"
+      });
+    }
+
+    // Block only terminal/invalid states.
+    if (order.status !== "pending") {
+      return res.status(400).json({ error: `Order cannot be confirmed with status: ${order.status}` });
+    }
+
+    await db.query(
+      `UPDATE orders SET status = 'confirmed', updated_at = CURRENT_TIMESTAMP WHERE order_id = ?`,
+      [order_id]
+    );
+
+    res.json({
+      message: "Order confirmed after payment share",
+      order_id: order_id,
+      status: "confirmed"
+    });
+
+  } catch (err) {
+    console.error("Error confirming order after share:", err);
+    res.status(500).json({ error: "Failed to confirm order" });
   }
 });
 

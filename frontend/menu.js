@@ -10,26 +10,6 @@ function getSelectedPaymentMethod() {
   return selected ? selected.value : "online";
 }
 
-async function initiateOnlinePayment(orderId) {
-  const response = await fetch(apiUrl("payments/create-order"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ order_id: orderId })
-  });
-
-  const paymentData = await response.json();
-  if (!response.ok) {
-    throw new Error(paymentData.details || paymentData.error || "Failed to create payment session");
-  }
-
-  if (paymentData.provider === "phonepe" && paymentData.redirect_url) {
-    window.location.href = paymentData.redirect_url;
-    return;
-  }
-
-  throw new Error("PhonePe payment redirect URL not found");
-}
-
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -206,9 +186,9 @@ async function placeOrder() {
   if (cartItems.length === 0) return showToast("Please add items to your order", "warning");
 
   const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const paymentLabel = "PhonePe (Online)";
+  const paymentLabel = "QR Payment + Receipt Upload";
 
-  const confirmed = confirm(`Order Summary:\n\nMess: ${messName}\nTotal Amount: Rs.${total}\nPayment: ${paymentLabel}\n\nConfirm order?`);
+  const confirmed = confirm(`Order Summary:\n\nMess: ${messName}\nTotal Amount: Rs.${total}\nPayment: ${paymentLabel}\n\nAfter this, you will scan the QR and upload the payment screenshot.\n\nConfirm order?`);
   if (!confirmed) return;
 
   try {
@@ -238,8 +218,8 @@ async function placeOrder() {
     lastOrderPhone = customer_phone;
     saveUserSession("visitor", null, customer_phone, customer_name);
 
-    showToast("Redirecting to PhonePe...", "info");
-    await initiateOnlinePayment(orderId);
+    showToast("Order created. Continue with QR payment.", "success");
+    window.location.href = `payment-status.html?order_id=${encodeURIComponent(orderId)}&phone=${encodeURIComponent(customer_phone)}&amount=${encodeURIComponent(total.toFixed(2))}`;
     return;
 
     Object.keys(cart).forEach(key => {

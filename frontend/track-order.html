@@ -136,6 +136,16 @@
                         <p style="color: #2c3e50; margin: 5px 0 0 0;" id="detailPaymentStatus"></p>
                     </div>
                 </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 13px; margin-top: 12px;">
+                    <div>
+                        <p style="color: #7f8c8d; margin: 0;">Payment Reference</p>
+                        <p style="color: #2c3e50; margin: 5px 0 0 0;" id="detailPaymentReference"></p>
+                    </div>
+                    <div>
+                        <p style="color: #7f8c8d; margin: 0;">Proof Status</p>
+                        <p style="color: #2c3e50; margin: 5px 0 0 0;" id="detailProofStatus"></p>
+                    </div>
+                </div>
             </div>
 
             <!-- Status Timeline -->
@@ -212,6 +222,8 @@
             document.getElementById('detailPhone').textContent = order.customer_phone;
             document.getElementById('detailPaymentMethod').textContent = (order.payment_method || 'cash').toUpperCase();
             document.getElementById('detailPaymentStatus').textContent = (order.payment_status || 'pending').toUpperCase();
+            document.getElementById('detailPaymentReference').textContent = order.payment_reference || '-';
+            document.getElementById('detailProofStatus').textContent = (order.payment_proof_status || 'not_uploaded').toUpperCase();
 
             // Build status timeline
             const timeline = document.getElementById('statusTimeline');

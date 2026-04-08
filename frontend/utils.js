@@ -108,6 +108,12 @@ function isLoopbackOrigin(url) {
 
 const API_ORIGIN = (() => {
     const override = window.API_ORIGIN || localStorage.getItem('api_origin');
+
+    // In local development, always use local backend unless explicitly overridden via window.API_ORIGIN.
+    if (IS_LOCAL_HOST && !window.API_ORIGIN) {
+        return 'http://localhost:5000';
+    }
+
     if (override) {
         const cleaned = String(override).replace(/\/+$/, '');
         // Prevent deployed frontend from being pinned to localhost by mistake.

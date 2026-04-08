@@ -45,6 +45,17 @@ async function loadMess(search = '', location = '', minPrice = '', maxPrice = ''
             card.className = "mess-card";
             card.style.opacity = '0';
             card.style.animation = `fadeIn 0.4s ease-out ${index * 0.05}s forwards`;
+            card.style.cursor = 'pointer';
+            card.tabIndex = 0;
+            card.setAttribute('role', 'button');
+            card.setAttribute('aria-label', `Open menu for ${mess.name}`);
+            card.addEventListener('click', () => orderFood(mess.mess_id));
+            card.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    orderFood(mess.mess_id);
+                }
+            });
             card.innerHTML = `
                 <img src="Hostel_Mess_small.jpg" class="mess-img" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22200%22%3E%3Crect fill=%22%23667eea%22 width=%22300%22 height=%22200%22/%3E%3Ctext fill=%22white%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3EMess Image%3C/text%3E%3C/svg%3E'">
                 <div class="mess-info">
@@ -52,7 +63,7 @@ async function loadMess(search = '', location = '', minPrice = '', maxPrice = ''
                     <p class="location">📍 ${mess.location}</p>
                     <p class="price">₹${mess.monthly_price} / month</p>
                     <p class="rating">⭐ ${mess.rating || 'N/A'}</p>
-                    <button onclick="orderFood(${mess.mess_id})" style="background: linear-gradient(135deg, #27ae60, #2ecc71); margin-top: 10px;">
+                    <button onclick="event.stopPropagation(); orderFood(${mess.mess_id})" style="background: linear-gradient(135deg, #27ae60, #2ecc71); margin-top: 10px;">
                         Order Food 🍽️
                     </button>
                   </div>

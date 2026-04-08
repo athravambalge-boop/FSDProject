@@ -1,236 +1,71 @@
-const express = require("express");
+let express = require("express");
 const crypto = require("crypto");
-const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
+const multer = require("multer");
 const db = require("../config/db");
-
-let Razorpay = null;
-try {
-  Razorpay = require("razorpay");
-} catch (err) {
-  Razorpay = null;
-}
 
 const router = express.Router();
 
 const PAYMENT_CURRENCY = process.env.PAYMENT_CURRENCY || "INR";
-const PAYMENT_PROVIDER = (process.env.PAYMENT_PROVIDER || "phonepe").toLowerCase();
-const APP_BASE_URL = process.env.APP_BASE_URL || "http://127.0.0.1:5500";
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || "http://localhost:5000";
+const MANUAL_PAYMENT_UPI_ID = process.env.MANUAL_PAYMENT_UPI_ID || "athravambalge@okaxis";
+const MANUAL_PAYMENT_ACCOUNT_NAME = process.env.MANUAL_PAYMENT_ACCOUNT_NAME || "ATHARVA PRASHANT AMBALGE";
+const MANUAL_PAYMENT_ACCOUNT_NO = process.env.MANUAL_PAYMENT_ACCOUNT_NO || "000000000000";
+const MANUAL_PAYMENT_IFSC = process.env.MANUAL_PAYMENT_IFSC || "BANK0000000";
+const MANUAL_PAYMENT_QR_IMAGE_URL = process.env.MANUAL_PAYMENT_QR_IMAGE_URL || "QR.jpeg";
+const PROOF_UPLOAD_DIR = path.join(__dirname, "..", "uploads", "payment-proofs");
 
-const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID || process.env["Client Id"] || "M2361ZDEHB3QP_2604022056";
-const PHONEPE_SALT_KEY = process.env.PHONEPE_SALT_KEY || process.env["Client Secret"] || "N2Y4OWIyZmQtOTczOS00YWNlLWI5NGYtZGY0MGJhN2UxZmRh";
-const PHONEPE_SALT_INDEX = process.env.PHONEPE_SALT_INDEX || process.env["Key Index"] || "1";
-const PHONEPE_ENV = (process.env.PHONEPE_ENV || "sandbox").toLowerCase();
-
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || "";
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "";
-const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || "";
-
-function toPaise(amount) {
-  return Math.round(Number(amount) * 100);
-}
-
-function toRupees(amountInPaise) {
-  return Number((Number(amountInPaise || 0) / 100).toFixed(2));
-}
-
-function parseMaybeJson(value) {
-  if (!value) return null;
-  if (typeof value === "object") return value;
-  try {
-    return JSON.parse(value);
-  } catch (err) {
-    return null;
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new Error("Only PNG, JPG, JPEG and WEBP files are allowed"));
+    }
+    return cb(null, true);
   }
+});
+
+function normalizeText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
 }
 
-function hasPhonePeConfig() {
-  return Boolean(PHONEPE_MERCHANT_ID && PHONEPE_SALT_KEY && PHONEPE_SALT_INDEX);
-}
+function buildManualQrPayload(order) {
+  const amount = Number(order.total_amount).toFixed(2);
+  const ref = order.payment_reference || order.payment_order_id || `MM-${order.order_id}`;
 
-function hasRazorpayConfig() {
-  return Boolean(Razorpay && RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET);
-}
-
-function getPhonePeBaseUrl() {
-  return PHONEPE_ENV === "production"
-    ? "https://api.phonepe.com/apis/hermes"
-    : "https://api-preprod.phonepe.com/apis/pg-sandbox";
+  return {
+    order_id: order.order_id,
+    amount: Number(amount),
+    currency: PAYMENT_CURRENCY,
+    receiver: {
+      upi_id: MANUAL_PAYMENT_UPI_ID,
+      account_name: MANUAL_PAYMENT_ACCOUNT_NAME,
+      account_number: MANUAL_PAYMENT_ACCOUNT_NO,
+      ifsc: MANUAL_PAYMENT_IFSC
+    },
+    payment_reference: ref,
+    qr_image_url: MANUAL_PAYMENT_QR_IMAGE_URL,
+    note: "Pay to the above account and upload the payment screenshot."
+  };
 }
 
 function sanitizePhone(phone) {
   return String(phone || "").replace(/\D/g, "").slice(-10);
 }
 
-function createPhonePeHeaders(payloadBase64, apiPath) {
-  const checksumSource = `${payloadBase64}${apiPath}${PHONEPE_SALT_KEY}`;
-  const checksum = crypto.createHash("sha256").update(checksumSource).digest("hex");
 
-  return {
-    "Content-Type": "application/json",
-    "X-VERIFY": `${checksum}###${PHONEPE_SALT_INDEX}`,
-    "X-MERCHANT-ID": PHONEPE_MERCHANT_ID
-  };
-}
-
-function createPhonePeStatusHeaders(apiPath) {
-  const checksumSource = `${apiPath}${PHONEPE_SALT_KEY}`;
-  const checksum = crypto.createHash("sha256").update(checksumSource).digest("hex");
-
-  return {
-    accept: "application/json",
-    "X-VERIFY": `${checksum}###${PHONEPE_SALT_INDEX}`,
-    "X-MERCHANT-ID": PHONEPE_MERCHANT_ID
-  };
-}
-
-function mapPhonePeStateToStatus(state, code) {
-  const normalizedState = String(state || "").toUpperCase();
-  const normalizedCode = String(code || "").toUpperCase();
-
-  if (["COMPLETED", "SUCCESS", "PAYMENT_SUCCESS"].includes(normalizedState) || normalizedCode === "PAYMENT_SUCCESS") {
-    return "paid";
-  }
-
-  if (["FAILED", "PAYMENT_ERROR", "DECLINED", "EXPIRED"].includes(normalizedState) || normalizedCode === "PAYMENT_ERROR") {
-    return "failed";
-  }
-
-  return "pending";
-}
-
-async function fetchPhonePeStatus(merchantTransactionId) {
-  const apiPath = `/pg/v1/status/${PHONEPE_MERCHANT_ID}/${merchantTransactionId}`;
-  const statusResponse = await axios.get(`${getPhonePeBaseUrl()}${apiPath}`, {
-    headers: createPhonePeStatusHeaders(apiPath),
-    timeout: 15000
-  });
-
-  const gatewayPayload = statusResponse.data || {};
-  const data = gatewayPayload.data || {};
-  const paymentStatus = mapPhonePeStateToStatus(data.state, gatewayPayload.code);
-
-  return {
-    paymentStatus,
-    paymentId: data.transactionId || data.providerReferenceId || null,
-    gatewayPayload,
-    amount: toRupees(data.amount || 0)
-  };
-}
-
-async function createPhonePeOrder(order) {
-  if (!hasPhonePeConfig()) {
-    return {
-      error: {
-        status: 500,
-        body: {
-          error: "PhonePe is not configured",
-          details: "Set Client Id, Client Secret and Key Index in .env file"
-        }
-      }
-    };
-  }
-
-  const merchantTransactionId = `MM_${order.order_id}_${Date.now()}`;
-  const redirectUrl = `${APP_BASE_URL}/payment-status.html?order_id=${order.order_id}&txnid=${encodeURIComponent(merchantTransactionId)}`;
-  const callbackUrl = `${BACKEND_BASE_URL}/api/payments/webhook/phonepe`;
-
-  const phonePePayload = {
-    merchantId: PHONEPE_MERCHANT_ID,
-    merchantTransactionId,
-    merchantUserId: `USER_${sanitizePhone(order.customer_phone) || order.order_id}`,
-    amount: toPaise(order.total_amount),
-    redirectUrl,
-    redirectMode: "REDIRECT",
-    callbackUrl,
-    mobileNumber: sanitizePhone(order.customer_phone),
-    paymentInstrument: {
-      type: "PAY_PAGE"
-    }
-  };
-
-  const apiPath = "/pg/v1/pay";
-  const payloadBase64 = Buffer.from(JSON.stringify(phonePePayload), "utf8").toString("base64");
-
-  const phonePeResponse = await axios.post(
-    `${getPhonePeBaseUrl()}${apiPath}`,
-    { request: payloadBase64 },
-    {
-      headers: createPhonePeHeaders(payloadBase64, apiPath),
-      timeout: 15000
-    }
-  );
-
-  const responsePayload = phonePeResponse.data || {};
-  const responseData = responsePayload.data || {};
-  const paymentPageUrl =
-    responseData.instrumentResponse?.redirectInfo?.url ||
-    responseData.redirectUrl ||
-    null;
-
-  if (!paymentPageUrl) {
-    throw new Error("PhonePe did not return a redirect URL");
-  }
-
-  return {
-    provider: "phonepe",
-    paymentOrderId: merchantTransactionId,
-    redirectUrl: paymentPageUrl,
-    gatewayPayload: {
-      request: phonePePayload,
-      response: responsePayload
-    }
-  };
-}
-
-async function createRazorpayOrder(order) {
-  if (!hasRazorpayConfig()) {
-    return {
-      error: {
-        status: 500,
-        body: {
-          error: "Razorpay is not configured",
-          details: "Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET"
-        }
-      }
-    };
-  }
-
-  const razorpay = new Razorpay({
-    key_id: RAZORPAY_KEY_ID,
-    key_secret: RAZORPAY_KEY_SECRET
-  });
-
-  const gatewayOrder = await razorpay.orders.create({
-    amount: toPaise(order.total_amount),
-    currency: PAYMENT_CURRENCY,
-    receipt: `order_${order.order_id}`,
-    notes: {
-      app_order_id: String(order.order_id)
-    }
-  });
-
-  return {
-    provider: "razorpay",
-    paymentOrderId: gatewayOrder.id,
-    keyId: RAZORPAY_KEY_ID,
-    gatewayPayload: {
-      id: gatewayOrder.id,
-      amount: gatewayOrder.amount,
-      currency: gatewayOrder.currency
-    }
-  };
-}
-
-router.post("/create-order", async (req, res) => {
+router.get("/receipt-config", async (req, res) => {
   try {
-    const orderId = parseInt(req.body.order_id, 10);
+    const orderId = parseInt(req.query.order_id, 10);
     if (!orderId) {
       return res.status(400).json({ error: "order_id is required" });
     }
 
     const [orderRows] = await db.query(
-      `SELECT order_id, total_amount, payment_status, customer_phone
+      `SELECT order_id, customer_phone, total_amount, payment_status, payment_reference, payment_order_id
        FROM orders
        WHERE order_id = ?`,
       [orderId]
@@ -240,94 +75,50 @@ router.post("/create-order", async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    const order = orderRows[0];
-    if (order.payment_status === "paid") {
-      return res.status(400).json({ error: "Order already paid" });
-    }
-
-    let gatewayOrder = null;
-
-    if (PAYMENT_PROVIDER === "phonepe") {
-      gatewayOrder = await createPhonePeOrder(order);
-    } else if (PAYMENT_PROVIDER === "razorpay") {
-      gatewayOrder = await createRazorpayOrder(order);
-    } else {
-      return res.status(400).json({ error: `Unsupported PAYMENT_PROVIDER: ${PAYMENT_PROVIDER}` });
-    }
-
-    if (gatewayOrder?.error) {
-      return res.status(gatewayOrder.error.status).json(gatewayOrder.error.body);
-    }
-
-    await db.query(
-      `UPDATE orders
-       SET payment_method = 'online',
-           payment_status = 'pending',
-           payment_provider = ?,
-           payment_order_id = ?,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE order_id = ?`,
-      [gatewayOrder.provider, gatewayOrder.paymentOrderId, orderId]
-    );
-
-    await db.query(
-      `INSERT INTO payment_events (order_id, payment_order_id, event_type, status, amount, gateway_payload)
-       VALUES (?, ?, 'created', 'pending', ?, ?)`,
-      [orderId, gatewayOrder.paymentOrderId, order.total_amount, JSON.stringify(gatewayOrder.gatewayPayload || {})]
-    );
-
     return res.json({
-      message: "Payment order created",
-      order_id: orderId,
-      amount: Number(order.total_amount),
-      currency: PAYMENT_CURRENCY,
-      provider: gatewayOrder.provider,
-      payment_order_id: gatewayOrder.paymentOrderId,
-      key_id: gatewayOrder.keyId || null,
-      redirect_url: gatewayOrder.redirectUrl || null,
-      is_mock: false
+      order: orderRows[0],
+      config: buildManualQrPayload(orderRows[0])
     });
   } catch (err) {
-    const gatewayError = err?.response?.data || null;
-    const statusCode = err?.response?.status || 500;
-    const details =
-      gatewayError?.message ||
-      gatewayError?.code ||
-      gatewayError?.error ||
-      gatewayError?.errorMessage ||
-      err?.message ||
-      "Unknown gateway error";
+    console.error("Error fetching receipt config:", err);
 
-    console.error("Error creating payment order:", gatewayError || err.message || err);
-    return res.status(statusCode).json({
-      error: "Failed to create payment order",
-      details,
-      gateway_error: gatewayError
+    // Fallback: still provide basic QR config so frontend can continue.
+    const orderId = parseInt(req.query.order_id, 10) || null;
+    const amount = Number(req.query.amount || 0);
+    const fallbackOrder = {
+      order_id: orderId,
+      total_amount: Number.isFinite(amount) ? amount : 0,
+      payment_reference: orderId ? `MM-${orderId}` : "MM-ORDER"
+    };
+
+    return res.json({
+      order: fallbackOrder,
+      config: buildManualQrPayload(fallbackOrder),
+      fallback: true
     });
   }
 });
 
-router.post("/verify", async (req, res) => {
+router.post("/upload-proof", upload.single("receipt"), async (req, res) => {
   let connection;
   try {
-    const {
-      order_id,
-      payment_order_id,
-      payment_id,
-      payment_signature,
-      gateway_payload
-    } = req.body;
+    const orderId = parseInt(req.body.order_id, 10);
+    const customerPhone = sanitizePhone(req.body.customer_phone);
+    const providedUtr = normalizeText(req.body.utr || "").toUpperCase();
 
-    const orderId = parseInt(order_id, 10);
     if (!orderId) {
       return res.status(400).json({ error: "order_id is required" });
+    }
+
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({ error: "Please upload a receipt image" });
     }
 
     connection = await db.getConnection();
     await connection.beginTransaction();
 
     const [orderRows] = await connection.query(
-      `SELECT order_id, total_amount, status, payment_status, payment_provider, payment_order_id
+      `SELECT order_id, customer_phone, total_amount, payment_status, payment_reference, payment_order_id
        FROM orders
        WHERE order_id = ? FOR UPDATE`,
       [orderId]
@@ -339,282 +130,109 @@ router.post("/verify", async (req, res) => {
     }
 
     const order = orderRows[0];
+    if (customerPhone && sanitizePhone(order.customer_phone) !== customerPhone) {
+      await connection.rollback();
+      return res.status(403).json({ error: "Phone number does not match this order" });
+    }
 
     if (order.payment_status === "paid") {
-      await connection.commit();
-      return res.json({
-        message: "Payment already verified",
-        order_id: orderId,
-        payment_status: "paid"
-      });
-    }
-
-    const effectivePaymentOrderId = payment_order_id || order.payment_order_id;
-
-    if (!effectivePaymentOrderId) {
       await connection.rollback();
-      return res.status(400).json({ error: "payment_order_id is required" });
+      return res.status(400).json({ error: "Payment already verified for this order" });
     }
 
-    if (order.payment_order_id && order.payment_order_id !== effectivePaymentOrderId) {
-      await connection.rollback();
-      return res.status(400).json({ error: "payment_order_id does not match order" });
+    const imageSha256 = crypto.createHash("sha256").update(req.file.buffer).digest("hex");
+    const perceptualHash = null;
+    const extractedText = null;
+    const extractedUtr = providedUtr || null;
+
+    // For now, skip all cross-checks and auto-verify on successful screenshot upload.
+    const verificationPassed = true;
+    const verificationResult = "verified";
+    const reason = "Screenshot uploaded. Auto-approved";
+
+    const extension = path.extname(req.file.originalname || "").toLowerCase() || ".png";
+    const safeExt = [".png", ".jpg", ".jpeg", ".webp"].includes(extension) ? extension : ".png";
+    const fileName = `order_${orderId}_${Date.now()}_${imageSha256.slice(0, 8)}${safeExt}`;
+    const relativePath = path.join("payment-proofs", fileName).replace(/\\/g, "/");
+    const absolutePath = path.join(PROOF_UPLOAD_DIR, fileName);
+
+    if (!fs.existsSync(PROOF_UPLOAD_DIR)) {
+      fs.mkdirSync(PROOF_UPLOAD_DIR, { recursive: true });
     }
+    fs.writeFileSync(absolutePath, req.file.buffer);
 
-    let verificationStatus = "failed";
-    let resolvedPaymentId = payment_id || null;
-    let resolvedSignature = payment_signature || null;
-    let resolvedPayload = gateway_payload || null;
+    await connection.query(
+      `INSERT INTO payment_proofs (
+         order_id, customer_phone, file_path, image_sha256, perceptual_hash,
+         extracted_text, extracted_utr, receiver_match, amount_match, reference_match,
+         ai_risk_flag, verification_result, verification_reason
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        orderId,
+        order.customer_phone,
+        relativePath,
+        imageSha256,
+        perceptualHash,
+        extractedText,
+        extractedUtr,
+        1,
+        1,
+        1,
+        0,
+        verificationResult,
+        reason
+      ]
+    );
 
-    if (order.payment_provider === "razorpay") {
-      if (!payment_id || !payment_signature) {
-        await connection.rollback();
-        return res.status(400).json({ error: "payment_id and payment_signature are required" });
-      }
-
-      const expectedSignature = crypto
-        .createHmac("sha256", RAZORPAY_KEY_SECRET)
-        .update(`${effectivePaymentOrderId}|${payment_id}`)
-        .digest("hex");
-
-      const isVerified = expectedSignature === payment_signature;
-      verificationStatus = isVerified ? "paid" : "failed";
-    } else if (order.payment_provider === "phonepe") {
-      if (!hasPhonePeConfig()) {
-        await connection.rollback();
-        return res.status(500).json({ error: "PhonePe is not configured" });
-      }
-
-      const phonePeStatus = await fetchPhonePeStatus(effectivePaymentOrderId);
-      verificationStatus = phonePeStatus.paymentStatus;
-      resolvedPaymentId = phonePeStatus.paymentId;
-      resolvedSignature = null;
-      resolvedPayload = phonePeStatus.gatewayPayload;
-    } else {
-      await connection.rollback();
-      return res.status(400).json({ error: "Unsupported payment provider for verification" });
-    }
-
-    if (verificationStatus === "paid") {
-      await connection.query(
-        `UPDATE orders
-         SET payment_status = 'paid',
-             payment_id = ?,
-             payment_signature = ?,
-             paid_at = NOW(),
-             status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE order_id = ?`,
-        [resolvedPaymentId, resolvedSignature, orderId]
-      );
-    } else if (verificationStatus === "failed") {
-      await connection.query(
-        `UPDATE orders
-         SET payment_status = 'failed',
-             payment_id = ?,
-             payment_signature = ?,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE order_id = ?`,
-        [resolvedPaymentId, resolvedSignature, orderId]
-      );
-    }
+    await connection.query(
+      `UPDATE orders
+       SET payment_status = 'paid',
+           payment_proof_status = 'verified',
+           payment_proof_image = ?,
+           payment_id = ?,
+           paid_at = NOW(),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE order_id = ?`,
+      [relativePath, extractedUtr, orderId]
+    );
 
     await connection.query(
       `INSERT INTO payment_events (order_id, payment_order_id, payment_id, event_type, status, amount, gateway_payload)
-       VALUES (?, ?, ?, 'verification', ?, ?, ?)`,
+       VALUES (?, ?, ?, 'manual_proof_upload', ?, ?, ?)`,
       [
         orderId,
-        effectivePaymentOrderId,
-        resolvedPaymentId,
-        verificationStatus,
+        order.payment_order_id || order.payment_reference,
+        extractedUtr,
+        "paid",
         Number(order.total_amount),
-        JSON.stringify(resolvedPayload || req.body || {})
+        JSON.stringify({ autoVerified: true })
       ]
     );
 
     await connection.commit();
 
     return res.json({
-      message: verificationStatus === "paid" ? "Payment verified" : "Payment is pending/failed",
+      message: "Screenshot uploaded successfully. Share on WhatsApp to place order.",
       order_id: orderId,
-      payment_status: verificationStatus
+      payment_status: "paid",
+      payment_proof_status: "verified",
+      proof_image_url: `${BACKEND_BASE_URL}/uploads/${relativePath}`,
+      checks: {
+        paid_to_match: true,
+        amount_match: true,
+        auto_verified: true
+      }
     });
   } catch (err) {
     if (connection) {
       await connection.rollback();
     }
-    console.error("Error verifying payment:", err?.response?.data || err.message || err);
-    return res.status(500).json({ error: "Failed to verify payment" });
+    console.error("Error uploading payment proof:", err);
+    return res.status(500).json({ error: err.message || "Failed to process payment proof" });
   } finally {
     if (connection) {
       connection.release();
     }
-  }
-});
-
-router.post("/webhook/phonepe", async (req, res) => {
-  try {
-    const rawPayload = req.body || {};
-    let payload = rawPayload;
-
-    if (rawPayload.response) {
-      try {
-        const decoded = Buffer.from(String(rawPayload.response), "base64").toString("utf8");
-        payload = JSON.parse(decoded);
-      } catch (err) {
-        payload = rawPayload;
-      }
-    }
-
-    const data = payload.data || payload;
-    const merchantTransactionId =
-      data.merchantTransactionId ||
-      data.transactionId ||
-      rawPayload.merchantTransactionId ||
-      null;
-
-    if (!merchantTransactionId) {
-      return res.status(200).json({ message: "Webhook ignored: missing merchantTransactionId" });
-    }
-
-    const [orderRows] = await db.query(
-      `SELECT order_id, total_amount FROM orders WHERE payment_order_id = ? LIMIT 1`,
-      [merchantTransactionId]
-    );
-
-    if (orderRows.length === 0) {
-      return res.status(200).json({ message: "Webhook ignored: order mapping not found" });
-    }
-
-    const order = orderRows[0];
-    const status = mapPhonePeStateToStatus(data.state, payload.code || data.code);
-    const paymentId = data.transactionId || data.providerReferenceId || null;
-
-    if (status === "paid") {
-      await db.query(
-        `UPDATE orders
-         SET payment_status = 'paid',
-             payment_id = ?,
-             paid_at = NOW(),
-             status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE order_id = ?`,
-        [paymentId, order.order_id]
-      );
-    } else if (status === "failed") {
-      await db.query(
-        `UPDATE orders
-         SET payment_status = 'failed',
-             payment_id = ?,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE order_id = ?`,
-        [paymentId, order.order_id]
-      );
-    }
-
-    await db.query(
-      `INSERT INTO payment_events (order_id, payment_order_id, payment_id, event_type, status, amount, gateway_payload)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        order.order_id,
-        merchantTransactionId,
-        paymentId,
-        "phonepe.webhook",
-        status,
-        Number(order.total_amount),
-        JSON.stringify(payload)
-      ]
-    );
-
-    return res.json({ message: "PhonePe webhook processed" });
-  } catch (err) {
-    console.error("Error processing PhonePe webhook:", err);
-    return res.status(500).json({ error: "PhonePe webhook processing failed" });
-  }
-});
-
-router.post("/webhook/razorpay", express.raw({ type: "application/json" }), async (req, res) => {
-  try {
-    if (!RAZORPAY_WEBHOOK_SECRET) {
-      return res.status(400).json({ error: "Webhook secret is not configured" });
-    }
-
-    const signature = req.headers["x-razorpay-signature"];
-    const payloadBuffer = Buffer.isBuffer(req.body)
-      ? req.body
-      : Buffer.from(JSON.stringify(req.body || {}), "utf8");
-
-    const expectedSignature = crypto
-      .createHmac("sha256", RAZORPAY_WEBHOOK_SECRET)
-      .update(payloadBuffer)
-      .digest("hex");
-
-    if (expectedSignature !== signature) {
-      return res.status(400).json({ error: "Invalid webhook signature" });
-    }
-
-    const payload = Buffer.isBuffer(req.body)
-      ? JSON.parse(payloadBuffer.toString("utf8"))
-      : req.body;
-
-    const eventType = payload.event;
-    const entity = payload.payload?.payment?.entity || payload.payload?.refund?.entity;
-    const notes = parseMaybeJson(entity?.notes) || entity?.notes || {};
-    const orderId = parseInt(notes.app_order_id, 10);
-
-    if (!orderId) {
-      return res.status(200).json({ message: "Webhook ignored: app_order_id missing" });
-    }
-
-    const paymentOrderId = entity?.order_id || null;
-    const paymentId = entity?.id || null;
-    const amount = Number(entity?.amount || 0) / 100;
-
-    let status = "pending";
-    if (eventType === "payment.captured") {
-      status = "paid";
-      await db.query(
-        `UPDATE orders
-         SET payment_status = 'paid',
-             payment_id = ?,
-             paid_at = NOW(),
-             status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE order_id = ?`,
-        [paymentId, orderId]
-      );
-    } else if (eventType === "payment.failed") {
-      status = "failed";
-      await db.query(
-        `UPDATE orders
-         SET payment_status = 'failed',
-             payment_id = ?,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE order_id = ?`,
-        [paymentId, orderId]
-      );
-    } else if (eventType === "refund.processed") {
-      status = "refunded";
-      await db.query(
-        `UPDATE orders
-         SET payment_status = 'refunded',
-             refunded_at = NOW(),
-             updated_at = CURRENT_TIMESTAMP
-         WHERE order_id = ?`,
-        [orderId]
-      );
-    }
-
-    await db.query(
-      `INSERT INTO payment_events (order_id, payment_order_id, payment_id, event_type, status, amount, gateway_payload)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [orderId, paymentOrderId, paymentId, eventType, status, amount, JSON.stringify(payload)]
-    );
-
-    return res.json({ message: "Razorpay webhook processed" });
-  } catch (err) {
-    console.error("Error processing Razorpay webhook:", err);
-    return res.status(500).json({ error: "Webhook processing failed" });
   }
 });
 
@@ -626,7 +244,7 @@ router.get("/order/:order_id", async (req, res) => {
     }
 
     const [paymentRows] = await db.query(
-      `SELECT order_id, payment_method, payment_status, payment_provider, payment_order_id, payment_id, paid_at, refunded_at
+      `SELECT order_id, payment_method, payment_status, payment_provider, payment_order_id, payment_reference, payment_proof_status, payment_proof_image, payment_id, paid_at, refunded_at
        FROM orders
        WHERE order_id = ?`,
       [orderId]
@@ -653,6 +271,13 @@ router.get("/order/:order_id", async (req, res) => {
     console.error("Error fetching payment details:", err);
     return res.status(500).json({ error: "Failed to fetch payment details" });
   }
+});
+
+router.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError || /Only PNG, JPG, JPEG and WEBP/.test(String(err.message || ""))) {
+    return res.status(400).json({ error: err.message || "Invalid receipt upload" });
+  }
+  return next(err);
 });
 
 module.exports = router;

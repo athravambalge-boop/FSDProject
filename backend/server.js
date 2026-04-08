@@ -70,6 +70,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 /* -------------------------
    ROUTES
@@ -161,12 +162,35 @@ async function ensurePaymentSchema() {
       }
    }
 
+   async function dropIndexIfExists(tableName, indexName) {
+      const [rows] = await db.query(
+         `SELECT 1
+          FROM information_schema.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = ?
+            AND INDEX_NAME = ?
+          LIMIT 1`,
+         [tableName, indexName]
+      );
+
+      if (rows.length > 0) {
+         await db.query(`ALTER TABLE ${tableName} DROP INDEX ${indexName}`);
+      }
+   }
+
    await addColumnIfMissing("orders", "payment_method", "ENUM('cash', 'online') DEFAULT 'online'");
    await addColumnIfMissing("orders", "payment_status", "ENUM('pending', 'paid', 'failed', 'refunded') DEFAULT 'pending'");
    await addColumnIfMissing("orders", "payment_provider", "VARCHAR(50) DEFAULT NULL");
    await addColumnIfMissing("orders", "payment_order_id", "VARCHAR(100) DEFAULT NULL");
    await addColumnIfMissing("orders", "payment_id", "VARCHAR(100) DEFAULT NULL");
    await addColumnIfMissing("orders", "payment_signature", "VARCHAR(255) DEFAULT NULL");
+   await addColumnIfMissing("orders", "payment_reference", "VARCHAR(64) DEFAULT NULL");
+   await addColumnIfMissing(
+      "orders",
+      "payment_proof_status",
+      "ENUM('not_uploaded', 'under_review', 'verified', 'rejected') DEFAULT 'not_uploaded'"
+   );
+   await addColumnIfMissing("orders", "payment_proof_image", "VARCHAR(255) DEFAULT NULL");
    await addColumnIfMissing("orders", "paid_at", "DATETIME NULL");
    await addColumnIfMissing("orders", "refunded_at", "DATETIME NULL");
 
@@ -176,6 +200,7 @@ async function ensurePaymentSchema() {
    );
    await addIndexIfMissing("orders", "idx_payment_status", "payment_status");
    await addIndexIfMissing("orders", "idx_payment_order_id", "payment_order_id");
+   await addIndexIfMissing("orders", "idx_payment_reference", "payment_reference");
 
    await db.query(`
       CREATE TABLE IF NOT EXISTS payment_events (
@@ -193,6 +218,34 @@ async function ensurePaymentSchema() {
          CONSTRAINT fk_payment_events_order FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
       )
    `);
+
+   await db.query(`
+      CREATE TABLE IF NOT EXISTS payment_proofs (
+         proof_id INT AUTO_INCREMENT PRIMARY KEY,
+         order_id INT NOT NULL,
+         customer_phone VARCHAR(20) NOT NULL,
+         file_path VARCHAR(255) NOT NULL,
+         image_sha256 CHAR(64) NOT NULL,
+         perceptual_hash CHAR(64) NULL,
+         extracted_text MEDIUMTEXT NULL,
+         extracted_utr VARCHAR(40) NULL,
+         receiver_match TINYINT(1) DEFAULT 0,
+         amount_match TINYINT(1) DEFAULT 0,
+         reference_match TINYINT(1) DEFAULT 0,
+         ai_risk_flag TINYINT(1) DEFAULT 0,
+         verification_result ENUM('verified', 'rejected', 'review_required') NOT NULL,
+         verification_reason VARCHAR(255) NULL,
+         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+         INDEX idx_payment_proofs_order_id (order_id),
+         UNIQUE KEY uniq_payment_proof_sha256 (image_sha256),
+         UNIQUE KEY uniq_payment_proof_utr (extracted_utr),
+         CONSTRAINT fk_payment_proofs_order FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE
+      )
+   `);
+
+   // Temporary rule: allow repeated screenshots/UTRs across submissions.
+   await dropIndexIfExists("payment_proofs", "uniq_payment_proof_sha256");
+   await dropIndexIfExists("payment_proofs", "uniq_payment_proof_utr");
 }
 
 async function ensureAuthSchema() {
@@ -255,6 +308,11 @@ async function ensureAuthSchema() {
 --------------------------*/
 Promise.all([ensureWalletSchema(), ensurePaymentSchema(), ensureAuthSchema()])
    .then(() => {
+      const proofDir = path.join(__dirname, "uploads", "payment-proofs");
+      if (!fs.existsSync(proofDir)) {
+         fs.mkdirSync(proofDir, { recursive: true });
+      }
+
       app.listen(PORT, () => {
          console.log(`Server running at http://localhost:${PORT}`);
       });

@@ -3,20 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Status - Pccoe Campus Bites</title>
+    <title>QR Payment - Pccoe Campus Bites</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <h1 class="title"><a href="landing.html" class="title-brand">Pccoe Campus Bites</a></h1>
 
-    <div style="max-width: 700px; margin: 40px auto; padding: 0 20px;">
-        <div class="dashboard" style="text-align: center;">
-            <h2 id="statusTitle" style="margin-top: 0;">Checking Payment...</h2>
-            <p id="statusText" style="color: #7f8c8d;">Please wait while we verify your payment with PhonePe.</p>
-            <p id="orderInfo" style="font-weight: 600; color: #2c3e50;"></p>
+    <div style="max-width: 900px; margin: 30px auto; padding: 0 20px;">
+        <div class="dashboard" style="max-width: 900px;">
+            <h2 style="margin-top: 0;">Complete Your Payment</h2>
+            <p style="color: #7f8c8d; margin-top: -10px;">Scan the QR, pay exact amount, then upload screenshot with amount + receiver name + payment success text visible.</p>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-top: 16px;">
+                <div style="border: 1px solid #ecf0f1; border-radius: 10px; padding: 16px; background: #fcfffe;">
+                    <h3 style="margin: 0 0 10px 0;">Payment QR</h3>
+                    <img id="qrImage" src="" alt="Payment QR" style="width:100%; max-width:280px; border-radius:10px; border:1px solid #e9edf0; display:none;">
+                    <p id="qrFallback" style="font-size: 13px; color:#7f8c8d; margin-top:10px;">QR image is not configured. Use account details below.</p>
+                </div>
+
+                <div style="border: 1px solid #ecf0f1; border-radius: 10px; padding: 16px; background: #ffffff;">
+                    <h3 style="margin: 0 0 10px 0;">Required Details</h3>
+                    <p style="margin:6px 0;"><strong>Order:</strong> <span id="orderIdText">-</span></p>
+                    <p style="margin:6px 0;"><strong>Amount:</strong> <span id="amountText">-</span></p>
+                    <p style="margin:6px 0;"><strong>Paid To:</strong> <span id="paidToText">ATHARVA PRASHANT AMBALGE</span></p>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; border: 1px solid #ecf0f1; border-radius: 10px; padding: 16px; background: #ffffff;">
+                <h3 style="margin: 0 0 12px 0;">Upload Payment Screenshot</h3>
+                <input type="file" id="receiptFile" accept="image/png,image/jpeg,image/jpg,image/webp" style="margin-bottom: 10px;">
+                <input type="text" id="utrInput" placeholder="UTR / Reference (optional but recommended)">
+                <p style="font-size: 12px; color:#7f8c8d; margin-top: 8px;">Upload screenshot to confirm order immediately.</p>
+                <p id="apiOriginInfo" style="font-size: 12px; color:#95a5a6; margin-top: 6px;"></p>
+                <button id="uploadBtn" style="margin-top: 12px; width:auto;" onclick="uploadReceipt()">Upload Screenshot</button>
+            </div>
+
+            <div id="verificationBox" style="margin-top: 18px; display:none; border-radius: 10px; padding: 14px; background: #f8fbff; border: 1px solid #d9e8ff;">
+                <h3 id="statusTitle" style="margin: 0 0 8px 0;">Verification Result</h3>
+                <p id="statusText" style="margin: 0; color: #2c3e50;"></p>
+            </div>
+
             <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
                 <button id="trackBtn" style="display:none; width:auto;" onclick="goToTrackOrder()">Track Order</button>
+                <button id="shareWhatsAppBtn" style="display:none; width:auto; background:#25D366;" onclick="shareToWhatsApp()">📱 Share Receipt</button>
                 <button style="width:auto; background:#7f8c8d;" onclick="window.location.href='index.html'">Back to Messes</button>
+            </div>
+
+            <div id="whatsappShareBox" style="margin-top: 18px; display:none; border-radius: 10px; padding: 14px; background: #e8f5e9; border: 1px solid #81c784;">
+                <p style="margin: 0 0 12px 0; color: #2e7d32; font-weight: bold;">Share Payment Receipt to Owner:</p>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+                    <button onclick="shareToWhatsAppNumber('7276084388')" style="width:auto; background:#25D366; color:white; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; font-size:14px;">📱 7276084388</button>
+                    <button onclick="shareToWhatsAppNumber('9322189377')" style="width:auto; background:#25D366; color:white; border:none; padding:10px 16px; border-radius:6px; cursor:pointer; font-size:14px;">📱 9322189377</button>
+                </div>
             </div>
         </div>
     </div>
@@ -24,6 +62,9 @@
     <script src="utils.js"></script>
     <script>
         let currentOrderId = null;
+        let currentPhone = '';
+        let uploadedImageUrl = null;
+        let uploadedProofUrl = '';
 
         function goToTrackOrder() {
             if (!currentOrderId) {
@@ -33,65 +74,286 @@
             window.location.href = `track-order.html?id=${encodeURIComponent(currentOrderId)}`;
         }
 
-        async function verifyPayment() {
+        function setStatus(title, text, tone = 'neutral') {
+            const box = document.getElementById('verificationBox');
+            const titleEl = document.getElementById('statusTitle');
+            const textEl = document.getElementById('statusText');
+
+            box.style.display = 'block';
+            titleEl.textContent = title;
+            textEl.textContent = text;
+
+            if (tone === 'success') {
+                box.style.background = '#eefaf3';
+                box.style.borderColor = '#b9e7cb';
+                titleEl.style.color = '#1f8f4a';
+            } else if (tone === 'warning') {
+                box.style.background = '#fff8eb';
+                box.style.borderColor = '#f2d5a2';
+                titleEl.style.color = '#9a6510';
+            } else {
+                box.style.background = '#fdeff0';
+                box.style.borderColor = '#f0c4c9';
+                titleEl.style.color = '#b13647';
+            }
+        }
+
+        function buildQrCandidates(rawPath) {
+            const value = String(rawPath || '').trim();
+            const candidates = [];
+
+            if (value) {
+                if (value.startsWith('http')) {
+                    candidates.push(value);
+                } else if (value.startsWith('/uploads/')) {
+                    candidates.push(`${API_ORIGIN}${value}`);
+                } else {
+                    candidates.push(value, `./${value}`, `/frontend/${value}`, `/FSDProject/frontend/${value}`);
+                }
+            }
+
+            const defaults = ['QR.jpeg', './QR.jpeg', '/frontend/QR.jpeg', '/FSDProject/frontend/QR.jpeg'];
+            for (const candidate of defaults) {
+                if (!candidates.includes(candidate)) {
+                    candidates.push(candidate);
+                }
+            }
+
+            return candidates;
+        }
+
+        function preloadImage(src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(src);
+                img.onerror = reject;
+                img.src = src;
+            });
+        }
+
+        async function renderQrImage(qrPath) {
+            const qrImage = document.getElementById('qrImage');
+            const qrFallback = document.getElementById('qrFallback');
+            const candidates = buildQrCandidates(qrPath);
+
+            for (const candidate of candidates) {
+                try {
+                    await preloadImage(candidate);
+                    qrImage.src = candidate;
+                    qrImage.style.display = 'block';
+                    qrFallback.style.display = 'none';
+                    return;
+                } catch (err) {
+                    // Try next candidate path.
+                }
+            }
+
+            qrImage.style.display = 'none';
+            qrFallback.style.display = 'block';
+            qrFallback.textContent = 'QR image not found. Checked QR.jpeg in common paths. Use account details below.';
+        }
+
+        async function loadPaymentConfig() {
             const params = new URLSearchParams(window.location.search);
             const orderId = params.get('order_id');
-            const txnId = params.get('txnid');
+            const phone = params.get('phone') || localStorage.getItem('customer_phone') || '';
+            const amountFromUrl = Number(params.get('amount'));
+
+            const apiInfoEl = document.getElementById('apiOriginInfo');
+            if (apiInfoEl) {
+                apiInfoEl.textContent = `Connected API: ${API_ORIGIN}`;
+            }
 
             currentOrderId = orderId;
+            currentPhone = phone;
 
-            if (!orderId || !txnId) {
-                document.getElementById('statusTitle').textContent = 'Invalid Payment Return';
-                document.getElementById('statusText').textContent = 'Missing order details in redirect URL.';
+            // Always try showing local QR first, even if API/config fetch fails.
+            await renderQrImage('QR.jpeg');
+
+            if (!orderId) {
+                setStatus('Invalid Link', 'Missing order details in URL.', 'error');
                 return;
             }
 
-            document.getElementById('orderInfo').textContent = `Order #${orderId}`;
+            document.getElementById('orderIdText').textContent = `#${orderId}`;
+            if (Number.isFinite(amountFromUrl) && amountFromUrl > 0) {
+                document.getElementById('amountText').textContent = formatCurrency(amountFromUrl);
+            }
 
             try {
-                const response = await fetch(apiUrl('payments/verify'), {
+                const response = await fetch(apiUrl(`payments/receipt-config?order_id=${encodeURIComponent(orderId)}`));
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Unable to load payment details');
+                }
+
+                const order = result.order || {};
+                const config = result.config || {};
+
+                document.getElementById('amountText').textContent = formatCurrency(config.amount || order.total_amount || 0);
+                document.getElementById('paidToText').textContent = config.receiver?.account_name || 'ATHARVA PRASHANT AMBALGE';
+
+                await renderQrImage(config.qr_image_url || 'QR.jpeg');
+
+                if ((order.payment_status || '').toLowerCase() === 'paid') {
+                    setStatus('Payment Already Verified', 'This order is already confirmed.', 'success');
+                    document.getElementById('trackBtn').style.display = 'inline-block';
+                }
+            } catch (error) {
+                setStatus('Unable To Load', error.message || 'Unable to load payment details.', 'error');
+            }
+        }
+
+        async function uploadReceipt() {
+            const fileInput = document.getElementById('receiptFile');
+            const utrInput = document.getElementById('utrInput');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            const isLegacyDuplicateError = (message) => {
+                const text = String(message || '').toLowerCase();
+                return text.includes('already used') || text.includes('similar receipt image was already submitted');
+            };
+
+            const confirmOrderDirectly = async () => {
+                const res = await fetch(apiUrl(`orders/confirm-after-share/${currentOrderId}`), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        order_id: Number(orderId),
-                        payment_order_id: txnId
-                    })
+                    body: JSON.stringify({ customer_phone: currentPhone })
+                });
+                const payload = await res.json().catch(() => ({}));
+                return { ok: res.ok, payload };
+            };
+
+            if (!currentOrderId) {
+                setStatus('Invalid Order', 'Order ID is missing.', 'error');
+                return;
+            }
+
+            const file = fileInput.files?.[0];
+            if (!file) {
+                setStatus('File Required', 'Please choose a payment screenshot.', 'warning');
+                return;
+            }
+
+            // Keep image ready for WhatsApp share regardless of backend response shape.
+            try {
+                uploadedImageUrl = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            } catch (err) {
+                uploadedImageUrl = null;
+            }
+
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+
+            try {
+                const formData = new FormData();
+                formData.append('order_id', currentOrderId);
+                formData.append('receipt', file);
+                if (currentPhone) formData.append('customer_phone', currentPhone);
+                if (utrInput.value.trim()) formData.append('utr', utrInput.value.trim());
+
+                const response = await fetch(apiUrl('payments/upload-proof'), {
+                    method: 'POST',
+                    body: formData
                 });
 
                 const result = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(result.error || 'Unable to verify payment');
+                    if (isLegacyDuplicateError(result.error || result.message)) {
+                        setStatus('Screenshot Uploaded', 'Now share on WhatsApp to place your order.', 'warning');
+                        document.getElementById('shareWhatsAppBtn').style.display = 'inline-block';
+                        return;
+                    }
+                    throw new Error(result.error || 'Upload failed');
                 }
 
-                const status = (result.payment_status || '').toLowerCase();
-                const titleEl = document.getElementById('statusTitle');
-                const textEl = document.getElementById('statusText');
+                uploadedProofUrl = result.proof_image_url || '';
 
-                if (status === 'paid') {
-                    titleEl.textContent = 'Payment Successful';
-                    titleEl.style.color = '#27ae60';
-                    textEl.textContent = 'Your PhonePe payment is confirmed and the order is placed.';
-                } else if (status === 'pending') {
-                    titleEl.textContent = 'Payment Pending';
-                    titleEl.style.color = '#f39c12';
-                    textEl.textContent = 'Your payment is still pending. Please wait and check again from track order.';
+                if ((result.payment_status || '').toLowerCase() === 'paid') {
+                    setStatus('Screenshot Uploaded', result.message || 'Now share on WhatsApp to place your order.', 'warning');
+                    document.getElementById('shareWhatsAppBtn').style.display = 'inline-block';
+                } else if ((result.payment_proof_status || '').toLowerCase() === 'under_review') {
+                    setStatus('Under Review', result.message || 'Receipt uploaded and sent for review.', 'warning');
+                    document.getElementById('shareWhatsAppBtn').style.display = 'inline-block';
                 } else {
-                    titleEl.textContent = 'Payment Failed';
-                    titleEl.style.color = '#e74c3c';
-                    textEl.textContent = 'Payment could not be confirmed. If money is deducted, it is usually auto-reversed by the gateway.';
+                    setStatus('Upload Failed', result.message || 'Unable to process screenshot.', 'error');
                 }
-
-                document.getElementById('trackBtn').style.display = 'inline-block';
             } catch (error) {
-                document.getElementById('statusTitle').textContent = 'Verification Error';
-                document.getElementById('statusTitle').style.color = '#e74c3c';
-                document.getElementById('statusText').textContent = error.message || 'Unable to verify payment status right now.';
-                document.getElementById('trackBtn').style.display = 'inline-block';
+                const msg = error.message || 'Unable to upload receipt right now.';
+                const isLegacyDuplicate = String(msg).toLowerCase().includes('already used') || String(msg).toLowerCase().includes('similar receipt image was already submitted');
+                if (isLegacyDuplicate) {
+                    setStatus('Screenshot Uploaded', 'Now share on WhatsApp to place your order.', 'warning');
+                    document.getElementById('shareWhatsAppBtn').style.display = 'inline-block';
+                } else {
+                    setStatus('Upload Failed', msg, 'error');
+                }
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload Screenshot';
             }
         }
 
-        document.addEventListener('DOMContentLoaded', verifyPayment);
+        function shareToWhatsApp() {
+            if (!uploadedImageUrl) {
+                alert('No image to share. Please upload a screenshot first.');
+                return;
+            }
+            document.getElementById('whatsappShareBox').style.display = 'block';
+        }
+
+        async function shareToWhatsAppNumber(phoneNumber) {
+            const amount = document.getElementById('amountText').textContent;
+            const paidTo = document.getElementById('paidToText').textContent;
+
+            try {
+                // Confirm order after payment share
+                const confirmResponse = await fetch(apiUrl(`orders/confirm-after-share/${currentOrderId}`), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ customer_phone: currentPhone })
+                });
+
+                const confirmResult = await confirmResponse.json();
+
+                if (!confirmResponse.ok) {
+                    const msg = String(confirmResult.error || 'Failed to confirm order');
+                    if (!msg.toLowerCase().includes('already confirmed') && !msg.toLowerCase().includes('status: confirmed')) {
+                        throw new Error(msg);
+                    }
+                }
+
+                const message = encodeURIComponent(
+                    `Here's my payment receipt for Pccoe Campus Bites\n\n` +
+                    `Order: #${currentOrderId}\n` +
+                    `Amount: ${amount}\n` +
+                    `Paid To: ${paidTo}\n` +
+                    (uploadedProofUrl ? `Receipt Image: ${uploadedProofUrl}\n` : '') +
+                    `Status: Verified ✓`
+                );
+
+                // Format phone number for WhatsApp (prepend country code if needed)
+                const formattedPhone = phoneNumber.includes('+') ? phoneNumber : `+91${phoneNumber}`;
+                
+                // Hide share box before opening WhatsApp
+                document.getElementById('whatsappShareBox').style.display = 'none';
+                setStatus('Order Confirmed', 'Your order has been placed! Sending receipt via WhatsApp...', 'success');
+                document.getElementById('trackBtn').style.display = 'inline-block';
+                
+                // Open WhatsApp with specific number
+                window.open(`https://wa.me/${formattedPhone}?text=${message}`, '_blank');
+            } catch (error) {
+                setStatus('Share Failed', error.message || 'Failed to share receipt. Please try again.', 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadPaymentConfig);
     </script>
 </body>
 </html>
