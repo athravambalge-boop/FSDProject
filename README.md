@@ -54,7 +54,7 @@ The simplest Render setup is a single Node.js web service that serves both the A
 
 2. Deploy the backend as a Render Web Service.
 
-   Use `backend/` as the root directory, `npm install` as the build command, and `npm start` as the start command.
+   Use `cd backend && npm install` as the build command and `cd backend && npm start` as the start command.
 
 3. Add these environment variables in Render.
 
