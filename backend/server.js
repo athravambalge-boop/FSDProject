@@ -350,10 +350,25 @@ async function ensureBaseSchema() {
    }
 }
 
+async function runSchemaStep(stepName, stepFn) {
+   try {
+      await stepFn();
+   } catch (err) {
+      console.error(`Schema step failed: ${stepName}`);
+      console.error(err?.stack || err);
+      throw err;
+   }
+}
+
 /* -------------------------
    START SERVER
 --------------------------*/
-Promise.all([ensureBaseSchema(), ensureWalletSchema(), ensurePaymentSchema(), ensureAuthSchema()])
+Promise.all([
+   runSchemaStep("base schema", ensureBaseSchema),
+   runSchemaStep("wallet schema", ensureWalletSchema),
+   runSchemaStep("payment schema", ensurePaymentSchema),
+   runSchemaStep("auth schema", ensureAuthSchema)
+])
    .then(() => {
       const proofDir = path.join(__dirname, "uploads", "payment-proofs");
       if (!fs.existsSync(proofDir)) {
@@ -365,6 +380,6 @@ Promise.all([ensureBaseSchema(), ensureWalletSchema(), ensurePaymentSchema(), en
       });
    })
    .catch((err) => {
-      console.error("Failed to initialize database schema:", err);
+      console.error("Failed to initialize database schema:", err?.stack || err);
       process.exit(1);
    });
