@@ -1,11 +1,14 @@
 -- ============================================================
--- MESSMATE DATABASE - COMPLETE SETUP SCRIPT
+-- MESSMATE DATABASE - COMPLETE SETUP SCRIPT (SCHEMA ONLY)
 -- Full schema with all tables and relationships
 -- ============================================================
 
 -- Create Database
-CREATE DATABASE IF NOT EXISTS messmate_db;
+DROP DATABASE IF EXISTS messmate_db;
+CREATE DATABASE messmate_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE messmate_db;
+
+SET FOREIGN_KEY_CHECKS = 0;
 
 -- ============================================================
 -- 1. USERS TABLE (For authentication - admin/owner/visitor)
@@ -17,12 +20,14 @@ CREATE TABLE IF NOT EXISTS users (
     phone VARCHAR(20),
     email VARCHAR(150),
     role ENUM('admin', 'owner', 'visitor') DEFAULT 'visitor',
+    mess_id INT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_username (username),
     INDEX idx_users_phone (phone),
     INDEX idx_users_email (email),
-    INDEX idx_role (role)
+    INDEX idx_role (role),
+    INDEX idx_users_mess_id (mess_id)
 );
 
 -- ============================================================
@@ -37,10 +42,16 @@ CREATE TABLE IF NOT EXISTS mess (
     owner_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (owner_id) REFERENCES users(user_id),
+    FOREIGN KEY (owner_id) REFERENCES users(user_id) ON DELETE SET NULL ON UPDATE CASCADE,
     INDEX idx_name (name),
     INDEX idx_location (location)
 );
+
+ALTER TABLE users
+ADD CONSTRAINT fk_users_mess_id
+FOREIGN KEY (mess_id) REFERENCES mess(mess_id)
+ON DELETE SET NULL
+ON UPDATE CASCADE;
 
 -- ============================================================
 -- 3. MENU_ITEMS TABLE (For food menu)
@@ -55,7 +66,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
     is_available BOOLEAN DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (mess_id) REFERENCES mess(mess_id) ON DELETE CASCADE,
+    FOREIGN KEY (mess_id) REFERENCES mess(mess_id) ON DELETE CASCADE ON UPDATE CASCADE,
     INDEX idx_mess_id (mess_id),
     INDEX idx_category (category)
 );
@@ -88,7 +99,7 @@ CREATE TABLE IF NOT EXISTS orders (
     special_instructions TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (mess_id) REFERENCES mess(mess_id),
+    FOREIGN KEY (mess_id) REFERENCES mess(mess_id) ON DELETE CASCADE ON UPDATE CASCADE,
     INDEX idx_mess_id (mess_id),
     INDEX idx_status (status),
     INDEX idx_created_at (created_at),
@@ -99,7 +110,7 @@ CREATE TABLE IF NOT EXISTS orders (
 );
 
 -- ============================================================
--- 5. CUSTOMERS TABLE (For customer profiles & history)
+-- 5. CUSTOMERS TABLE (For customer profiles and history)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS customers (
     customer_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -142,7 +153,7 @@ CREATE TABLE IF NOT EXISTS payment_events (
     amount DECIMAL(10,2) NOT NULL,
     gateway_payload JSON,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE ON UPDATE CASCADE,
     INDEX idx_payment_events_order_id (order_id),
     INDEX idx_payment_events_payment_id (payment_id)
 );
@@ -166,7 +177,7 @@ CREATE TABLE IF NOT EXISTS payment_proofs (
     verification_result ENUM('verified', 'rejected', 'review_required') NOT NULL,
     verification_reason VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE ON UPDATE CASCADE,
     UNIQUE KEY uniq_payment_proof_sha256 (image_sha256),
     UNIQUE KEY uniq_payment_proof_utr (extracted_utr),
     INDEX idx_payment_proofs_order_id (order_id)
@@ -180,7 +191,7 @@ CREATE TABLE IF NOT EXISTS favorites (
     customer_phone VARCHAR(20) NOT NULL,
     mess_id INT NOT NULL,
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (mess_id) REFERENCES mess(mess_id) ON DELETE CASCADE,
+    FOREIGN KEY (mess_id) REFERENCES mess(mess_id) ON DELETE CASCADE ON UPDATE CASCADE,
     UNIQUE KEY unique_favorite (customer_phone, mess_id),
     INDEX idx_phone (customer_phone)
 );
@@ -205,7 +216,7 @@ CREATE TABLE IF NOT EXISTS promos (
 );
 
 -- ============================================================
--- 11. REVIEWS TABLE (For ratings & feedback)
+-- 11. REVIEWS TABLE (For ratings and feedback)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS reviews (
     review_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -214,7 +225,7 @@ CREATE TABLE IF NOT EXISTS reviews (
     rating INT CHECK (rating >= 1 AND rating <= 5),
     comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (mess_id) REFERENCES mess(mess_id) ON DELETE CASCADE,
+    FOREIGN KEY (mess_id) REFERENCES mess(mess_id) ON DELETE CASCADE ON UPDATE CASCADE,
     INDEX idx_mess_id (mess_id),
     INDEX idx_rating (rating)
 );
@@ -236,34 +247,12 @@ CREATE TABLE IF NOT EXISTS visitor_otps (
     INDEX idx_visitor_otps_expires_at (expires_at)
 );
 
--- ============================================================
--- INSERT SAMPLE DATA
--- ============================================================
-
--- Insert admin user
-INSERT INTO users (username, password, phone, role) VALUES 
-('admin', 'admin123', '9999999999', 'admin');
-
--- Insert sample messes
-INSERT INTO mess (name, location, veg_type, contact_number, owner_id) VALUES 
-('Golden Mess', 'Near Station', 'Mixed', '9876543210', NULL),
-('Pure Veg Mess', 'City Center', 'Veg', '9876543211', NULL),
-('Non-Veg Paradise', 'Market Area', 'Non-Veg', '9876543212', NULL);
-
--- Insert sample menu items
-INSERT INTO menu_items (mess_id, item_name, item_price, category, description) VALUES 
-(1, 'Chicken Biryani', 150, 'Main Course', 'Fragrant basmati rice with chicken'),
-(1, 'Paneer Butter Masala', 120, 'Curry', 'Creamy paneer in tomato gravy'),
-(1, 'Dal Makhani', 80, 'Curry', 'Creamed lentils cooked overnight'),
-(2, 'Aloo Gobi', 60, 'Curry', 'Potato and cauliflower dry curry'),
-(2, 'Chana Masala', 70, 'Curry', 'Spiced chickpea curry'),
-(3, 'Mutton Curry', 200, 'Main Course', 'Tender mutton in rich gravy'),
-(3, 'Fish Fry', 180, 'Main Course', 'Crispy fried fish pieces');
+SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
 -- SUCCESS MESSAGE
 -- ============================================================
-SELECT '✅ Complete database setup successfully!' as Result;
+SELECT 'Complete database setup successful (schema only).' as Result;
 
 -- ============================================================
 -- VERIFY ALL TABLES
@@ -276,6 +265,7 @@ DESCRIBE orders;
 DESCRIBE customers;
 DESCRIBE wallet_transactions;
 DESCRIBE payment_events;
+DESCRIBE payment_proofs;
 DESCRIBE favorites;
 DESCRIBE promos;
 DESCRIBE reviews;

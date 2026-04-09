@@ -66,10 +66,16 @@
         <div class="dashboard">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h2 style="margin: 0;">Orders Management 🛒</h2>
-                <button onclick="loadOrders()" 
-                    style="width: auto; padding: 8px 15px; background: #667eea;">
-                    🔄 Refresh
-                </button>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="loadOrders()" 
+                        style="width: auto; padding: 8px 15px; background: #667eea;">
+                        🔄 Refresh
+                    </button>
+                    <button onclick="deleteAllOrders()"
+                        style="width: auto; padding: 8px 15px; background: #c0392b;">
+                        🗑️ Delete All Orders
+                    </button>
+                </div>
             </div>
 
             <!-- Filter -->

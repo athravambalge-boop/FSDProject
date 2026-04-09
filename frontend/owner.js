@@ -386,6 +386,59 @@ async function cancelOrder(orderId, customerPhone) {
 }
 
 /* ========================
+   DELETE ALL ORDERS
+======================== */
+
+async function deleteAllOrders() {
+    const confirmation = prompt('Type DELETE to permanently remove all orders for your mess.');
+    if (confirmation !== 'DELETE') {
+        if (confirmation !== null) {
+            showToast('Deletion cancelled. Confirmation text did not match.', 'warning');
+        }
+        return;
+    }
+
+    const session = getUserSession();
+    const ownerContact = session.customer_contact;
+
+    if (!ownerContact) {
+        showToast('Session expired. Please log in again as owner.', 'error');
+        return;
+    }
+
+    try {
+        showLoading();
+
+        const res = await fetch(apiUrl(`orders/${messId}/all`), {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner_contact: ownerContact })
+        });
+
+        hideLoading();
+
+        if (!res.ok) {
+            try {
+                const error = await res.json();
+                throw new Error(error.error || `Failed to delete orders (${res.status})`);
+            } catch (parseError) {
+                throw new Error(`Server error: ${res.status} ${res.statusText}`);
+            }
+        }
+
+        const data = await res.json();
+        const deletedCount = data.deleted_count || 0;
+        showToast(`Deleted ${deletedCount} order${deletedCount === 1 ? '' : 's'} successfully`, 'success');
+        loadOrders();
+        loadStats();
+    } catch (error) {
+        console.error('Error deleting all orders:', error);
+        hideLoading();
+        showToast(error.message || 'Failed to delete all orders', 'error');
+    }
+}
+
+/* ========================
    INITIALIZE PAGE
 ======================== */
 

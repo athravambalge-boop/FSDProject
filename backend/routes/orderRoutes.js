@@ -448,6 +448,52 @@ router.get("/:mess_id", async (req, res) => {
 });
 
 /* ========================
+   DELETE ALL ORDERS FOR OWNER
+======================== */
+router.delete("/:mess_id/all", async (req, res) => {
+  try {
+    const messId = parseInt(req.params.mess_id, 10);
+    const ownerContact = String(req.body?.owner_contact || "").trim();
+
+    if (!Number.isInteger(messId) || messId <= 0) {
+      return res.status(400).json({ error: "Invalid mess_id" });
+    }
+
+    if (!ownerContact) {
+      return res.status(400).json({ error: "Owner verification is required" });
+    }
+
+    const [ownerRows] = await db.query(
+      `SELECT id
+       FROM users
+       WHERE role = 'owner'
+         AND mess_id = ?
+         AND (username = ? OR phone = ? OR email = ?)
+       LIMIT 1`,
+      [messId, ownerContact, ownerContact, ownerContact]
+    );
+
+    if (ownerRows.length === 0) {
+      return res.status(403).json({ error: "Unauthorized to delete orders for this mess" });
+    }
+
+    const [result] = await db.query(
+      `DELETE FROM orders WHERE mess_id = ?`,
+      [messId]
+    );
+
+    res.json({
+      message: "All orders deleted successfully",
+      mess_id: messId,
+      deleted_count: result.affectedRows || 0
+    });
+  } catch (err) {
+    console.error("Error deleting all orders:", err);
+    res.status(500).json({ error: "Failed to delete all orders" });
+  }
+});
+
+/* ========================
    UPDATE ORDER STATUS (OWNER ONLY)
 ======================== */
 router.put("/:order_id/status", async (req, res) => {
