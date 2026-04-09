@@ -83,6 +83,9 @@ CREATE TABLE IF NOT EXISTS orders (
     payment_order_id VARCHAR(100),
     payment_id VARCHAR(100),
     payment_signature VARCHAR(255),
+    payment_reference VARCHAR(64),
+    payment_proof_status ENUM('not_uploaded', 'under_review', 'verified', 'rejected') DEFAULT 'not_uploaded',
+    payment_proof_image VARCHAR(255),
     paid_at DATETIME,
     refunded_at DATETIME,
     special_instructions TEXT,
@@ -94,7 +97,8 @@ CREATE TABLE IF NOT EXISTS orders (
     INDEX idx_created_at (created_at),
     INDEX idx_phone (customer_phone),
     INDEX idx_payment_status (payment_status),
-    INDEX idx_payment_order_id (payment_order_id)
+    INDEX idx_payment_order_id (payment_order_id),
+    INDEX idx_payment_reference (payment_reference)
 );
 
 -- ============================================================
@@ -147,7 +151,32 @@ CREATE TABLE IF NOT EXISTS payment_events (
 );
 
 -- ============================================================
--- 8. FAVORITES TABLE (For saved messes)
+-- 8. PAYMENT_PROOFS TABLE (For QR screenshot verification)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS payment_proofs (
+    proof_id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    customer_phone VARCHAR(20) NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    image_sha256 CHAR(64) NOT NULL,
+    perceptual_hash CHAR(64),
+    extracted_text MEDIUMTEXT,
+    extracted_utr VARCHAR(40),
+    receiver_match TINYINT(1) DEFAULT 0,
+    amount_match TINYINT(1) DEFAULT 0,
+    reference_match TINYINT(1) DEFAULT 0,
+    ai_risk_flag TINYINT(1) DEFAULT 0,
+    verification_result ENUM('verified', 'rejected', 'review_required') NOT NULL,
+    verification_reason VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_payment_proof_sha256 (image_sha256),
+    UNIQUE KEY uniq_payment_proof_utr (extracted_utr),
+    INDEX idx_payment_proofs_order_id (order_id)
+);
+
+-- ============================================================
+-- 9. FAVORITES TABLE (For saved messes)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS favorites (
     favorite_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -160,7 +189,7 @@ CREATE TABLE IF NOT EXISTS favorites (
 );
 
 -- ============================================================
--- 9. PROMOS TABLE (For discount codes)
+-- 10. PROMOS TABLE (For discount codes)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS promos (
     promo_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -179,7 +208,7 @@ CREATE TABLE IF NOT EXISTS promos (
 );
 
 -- ============================================================
--- 10. REVIEWS TABLE (For ratings & feedback)
+-- 11. REVIEWS TABLE (For ratings & feedback)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS reviews (
     review_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -194,7 +223,7 @@ CREATE TABLE IF NOT EXISTS reviews (
 );
 
 -- ============================================================
--- 11. VISITOR_OTPS TABLE (For OTP-based visitor signup)
+-- 12. VISITOR_OTPS TABLE (For OTP-based visitor signup)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS visitor_otps (
     otp_id INT AUTO_INCREMENT PRIMARY KEY,

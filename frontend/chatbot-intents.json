@@ -1,0 +1,266 @@
+{
+  "fallbackIntent": {
+    "greet": "Hi! I am Campus Bites bot. Ask me anything about ordering, payment, and account flow.",
+    "quick": [
+      "How to order?",
+      "Track order",
+      "Contact support"
+    ]
+  },
+  "pageIntents": {
+    "landing.html": {
+      "greet": "Welcome! I can help you quickly sign up, login, or understand what this portal offers.",
+      "quick": [
+        "Sign up help",
+        "Login help",
+        "What can I do here?"
+      ]
+    },
+    "index.html": {
+      "greet": "Need help finding a mess? Ask about filters, prices, or how to place an order.",
+      "quick": [
+        "How to filter messes?",
+        "Open order history",
+        "Track order #123"
+      ]
+    },
+    "mess.html": {
+      "greet": "I can guide you through selecting items, using wallet balance, and placing your order.",
+      "quick": [
+        "How do I place order?",
+        "Wallet cash use",
+        "Payment steps"
+      ]
+    },
+    "login.html": {
+      "greet": "Owner login support is here. I can help with account access and role confusion.",
+      "quick": [
+        "Owner login steps",
+        "Forgot credentials",
+        "Student account question"
+      ]
+    },
+    "create-account.html": {
+      "greet": "I can help you create a student account with OTP using phone or email.",
+      "quick": [
+        "OTP not received",
+        "Phone vs email mode",
+        "Continue with saved account"
+      ]
+    },
+    "order-history.html": {
+      "greet": "I can help you read order history, payment status, and jump to tracking.",
+      "quick": [
+        "Track a past order",
+        "Payment status meaning",
+        "No orders shown"
+      ]
+    },
+    "track-order.html": {
+      "greet": "Ask me about order status steps, refresh, or cancellation rules.",
+      "quick": [
+        "Status meanings",
+        "How to cancel order?",
+        "Refresh tracking"
+      ]
+    },
+    "payment-status.html": {
+      "greet": "I can help with QR payment, screenshot upload, and WhatsApp share confirmation.",
+      "quick": [
+        "Upload receipt steps",
+        "Payment verification",
+        "Open track order"
+      ]
+    },
+    "owner.html": {
+      "greet": "Owner support mode active. Ask about adding menu items or managing order statuses.",
+      "quick": [
+        "Add menu item",
+        "Update order status",
+        "Filter orders"
+      ]
+    },
+    "admin.html": {
+      "greet": "Admin support mode active. I can guide adding, editing, and managing mess records.",
+      "quick": [
+        "Add new mess",
+        "Edit mess details",
+        "Contact number format"
+      ]
+    }
+  },
+  "intentRules": [
+    {
+      "id": "greeting",
+      "match": [
+        "hi",
+        "hello",
+        "hey",
+        "namaste"
+      ],
+      "response": "$page.greet"
+    },
+    {
+      "id": "website_info",
+      "match": [
+        "what can i do here",
+        "what can i do",
+        "website info"
+      ],
+      "response": "You can see the info about our website, explore mess options, place orders, track live status, and manage account/payment flow from here."
+    },
+    {
+      "id": "filter_messes",
+      "match": [
+        "how to filter messes",
+        "filter messes",
+        "mess filters"
+      ],
+      "response": "Use the search area on the home page. You can filter by name, location, min/max price, and rating, then click Search to get matching messes."
+    },
+    {
+      "id": "open_order_history",
+      "match": [
+        "open order history",
+        "go to order history",
+        "show my order history"
+      ],
+      "response": "Let me open your Track Order page to find your order status.",
+      "action": "go:track-order.html"
+    },
+    {
+      "id": "order",
+      "match": [
+        "place order",
+        "book food",
+        "how to order",
+        "order"
+      ],
+      "response": "To place an order: open a mess, add items, review cart, fill your details, and click Book Food. If asked, complete payment and upload proof."
+    },
+    {
+      "id": "track",
+      "match": [
+        "track",
+        "where is my order"
+      ],
+      "response": "Use the Track Order page and search with your order ID. You can refresh status anytime, and some orders can be cancelled before preparation completes.",
+      "action": "go:track-order.html"
+    },
+    {
+      "id": "history",
+      "match": [
+        "history",
+        "my orders",
+        "past order"
+      ],
+      "response": "Open My Orders to view your previous orders, their statuses, and payment details.",
+      "action": "go:order-history.html"
+    },
+    {
+      "id": "payment",
+      "match": [
+        "payment",
+        "qr",
+        "receipt",
+        "screenshot",
+        "utr",
+        "proof"
+      ],
+      "response": "Payment flow: scan QR, pay exact amount, upload a clear screenshot, then share confirmation if prompted. Keep order ID and payment proof visible."
+    },
+    {
+      "id": "otp",
+      "match": [
+        "otp",
+        "not received",
+        "verification code"
+      ],
+      "response": "For OTP issues, check phone/email format, wait 30-60 seconds, then use Resend OTP. Verify network and spam folder for email mode."
+    },
+    {
+      "id": "account_mode",
+      "match": [
+        "phone vs email mode",
+        "phone or email mode",
+        "choose phone or email",
+        "phone mode",
+        "email mode"
+      ],
+      "response": "Choose phone mode if you want the OTP sent to your mobile number, or email mode if you want it sent to your email address. Use the option where you can access the OTP fastest."
+    },
+    {
+      "id": "saved_account",
+      "match": [
+        "continue with saved account",
+        "saved account",
+        "use existing account",
+        "already have an account"
+      ],
+      "response": "If you already have a saved account, continue by signing in instead of creating a new one. Open the Login page to access your existing account.",
+      "action": "go:login.html"
+    },
+    {
+      "id": "owner",
+      "match": [
+        "owner",
+        "dashboard",
+        "menu item",
+        "prepare",
+        "ready",
+        "completed"
+      ],
+      "response": "Owner dashboard lets you add menu items, review incoming orders, and move status from pending to completed."
+    },
+    {
+      "id": "admin",
+      "match": [
+        "admin",
+        "add mess",
+        "edit mess",
+        "contact number"
+      ],
+      "response": "Admin dashboard can add and edit mess records with location, veg type, price, and contact details."
+    },
+    {
+      "id": "login",
+      "match": [
+        "login",
+        "sign in",
+        "credentials"
+      ],
+      "response": "Owners use Login page credentials. Students can create a visitor account with OTP from Create Account page.",
+      "action": "go:login.html"
+    },
+    {
+      "id": "signup",
+      "match": [
+        "sign up",
+        "create account",
+        "register"
+      ],
+      "response": "Open Create Account, choose phone or email mode, request OTP, verify code, and your student account is ready.",
+      "action": "go:create-account.html"
+    },
+    {
+      "id": "contact",
+      "match": [
+        "contact",
+        "support",
+        "help line"
+      ],
+      "response": "For payment receipt sharing, use the numbers visible on payment confirmation screen. For account or order issues, use the page tools first, then contact the mess owner."
+    },
+    {
+      "id": "wallet",
+      "match": [
+        "wallet",
+        "wallet cash",
+        "wallet balance",
+        "use wallet",
+        "wallet payment"
+      ],
+      "response": "If you have wallet balance available, it will be shown during checkout. You can use it to pay part or full amount for your order. The balance will be deducted automatically after you complete the order."
+    }
+  ]
+}

@@ -27,6 +27,171 @@ async function loadMess(){
     }
 }
 
+    const CHATBOT_INTENTS_KEY = 'campus_bites_chatbot_intents';
+
+    function setIntentEditorMessage(text, isError = false) {
+        const msg = document.getElementById('chatbotIntentMessage');
+        if (!msg) return;
+        msg.textContent = text;
+        msg.style.color = isError ? '#c0392b' : '#1e8449';
+    }
+
+    async function loadChatbotIntentEditor() {
+        const area = document.getElementById('chatbotIntentJson');
+        if (!area) return;
+
+        const saved = localStorage.getItem(CHATBOT_INTENTS_KEY);
+        if (saved) {
+            area.value = saved;
+            setIntentEditorMessage('Loaded custom intent JSON from browser storage.');
+            return;
+        }
+
+        try {
+            const res = await fetch('chatbot-intents.json', { cache: 'no-store' });
+            if (!res.ok) {
+                throw new Error('Unable to load default intent file');
+            }
+
+            const config = await res.json();
+            area.value = JSON.stringify(config, null, 2);
+            setIntentEditorMessage('Loaded default intent JSON file.');
+        } catch (error) {
+            area.value = '{\n  "fallbackIntent": {\n    "greet": "Hi! I am Campus Bites bot.",\n    "quick": ["How to order?"]\n  },\n  "pageIntents": {},\n  "intentRules": []\n}';
+            setIntentEditorMessage('Default file not reachable. Using fallback JSON skeleton.', true);
+        }
+    }
+
+    function validateIntentConfig(value) {
+        return !!(value
+            && typeof value === 'object'
+            && value.fallbackIntent
+            && typeof value.fallbackIntent === 'object'
+            && value.pageIntents
+            && typeof value.pageIntents === 'object'
+            && Array.isArray(value.intentRules));
+    }
+
+    function getEditorConfigOrFail() {
+        const area = document.getElementById('chatbotIntentJson');
+        if (!area) {
+            setIntentEditorMessage('Editor not found.', true);
+            return null;
+        }
+
+        try {
+            const parsed = JSON.parse(area.value);
+            if (!validateIntentConfig(parsed)) {
+                throw new Error('Missing required keys: fallbackIntent, pageIntents, intentRules');
+            }
+            return parsed;
+        } catch (error) {
+            setIntentEditorMessage(`Fix JSON first: ${error.message}`, true);
+            return null;
+        }
+    }
+
+    function updateEditorConfig(config, successMessage) {
+        const area = document.getElementById('chatbotIntentJson');
+        if (!area) return;
+        area.value = JSON.stringify(config, null, 2);
+        setIntentEditorMessage(successMessage || 'Editor updated.');
+    }
+
+    function formatChatbotIntentJson() {
+        const config = getEditorConfigOrFail();
+        if (!config) return;
+        updateEditorConfig(config, 'JSON formatted successfully.');
+    }
+
+    function insertIntentRuleTemplate() {
+        const config = getEditorConfigOrFail();
+        if (!config) return;
+
+        const nextId = `custom_rule_${config.intentRules.length + 1}`;
+        config.intentRules.push({
+            id: nextId,
+            match: ['keyword one', 'keyword two'],
+            response: 'Write chatbot response here.',
+            action: 'go:track-order.html'
+        });
+
+        updateEditorConfig(config, `Inserted rule template: ${nextId}`);
+    }
+
+    function insertPageIntentTemplate() {
+        const config = getEditorConfigOrFail();
+        if (!config) return;
+
+        let idx = 1;
+        let key = `new-page-${idx}.html`;
+        while (config.pageIntents[key]) {
+            idx += 1;
+            key = `new-page-${idx}.html`;
+        }
+
+        config.pageIntents[key] = {
+            greet: 'Add page-specific greeting here.',
+            quick: ['Sample quick action 1', 'Sample quick action 2']
+        };
+
+        updateEditorConfig(config, `Inserted page intent template: ${key}`);
+    }
+
+    function insertOrderStatusRuleTemplate() {
+        const config = getEditorConfigOrFail();
+        if (!config) return;
+
+        const exists = config.intentRules.some(rule => rule && rule.id === 'live_order_status_hint');
+        if (exists) {
+            setIntentEditorMessage('Order status helper rule already exists.', true);
+            return;
+        }
+
+        config.intentRules.unshift({
+            id: 'live_order_status_hint',
+            match: ['track order #', 'order status', 'status of order'],
+            response: 'Send your order ID like: track order #123 and I will fetch live status from backend.'
+        });
+
+        updateEditorConfig(config, 'Inserted order status helper rule template.');
+    }
+
+    function saveChatbotIntentJson() {
+        const area = document.getElementById('chatbotIntentJson');
+        if (!area) return;
+
+        try {
+            const parsed = JSON.parse(area.value);
+            if (!validateIntentConfig(parsed)) {
+                throw new Error('Missing required keys: fallbackIntent, pageIntents, intentRules');
+            }
+
+            const pretty = JSON.stringify(parsed, null, 2);
+            localStorage.setItem(CHATBOT_INTENTS_KEY, pretty);
+            area.value = pretty;
+            setIntentEditorMessage('Intent JSON saved. Reload any page to apply chatbot changes.');
+        } catch (error) {
+            setIntentEditorMessage(`Invalid JSON: ${error.message}`, true);
+        }
+    }
+
+    async function resetChatbotIntentJson() {
+        const area = document.getElementById('chatbotIntentJson');
+        if (!area) return;
+
+        localStorage.removeItem(CHATBOT_INTENTS_KEY);
+        await loadChatbotIntentEditor();
+        setIntentEditorMessage('Intent JSON reset to default file values.');
+    }
+
+    window.saveChatbotIntentJson = saveChatbotIntentJson;
+    window.resetChatbotIntentJson = resetChatbotIntentJson;
+    window.insertIntentRuleTemplate = insertIntentRuleTemplate;
+    window.insertPageIntentTemplate = insertPageIntentTemplate;
+    window.insertOrderStatusRuleTemplate = insertOrderStatusRuleTemplate;
+    window.formatChatbotIntentJson = formatChatbotIntentJson;
+
 // ensure only admin can access
 (function(){
     const role = localStorage.getItem("role");
@@ -91,6 +256,7 @@ async function deleteMess(id){
 }
 
 loadMess();
+loadChatbotIntentEditor();
 
 // Edit Modal Functions
 async function openEditModal(messId) {

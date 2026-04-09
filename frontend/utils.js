@@ -347,3 +347,35 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionStorage.setItem('api_origin_notice_shown', '1');
     }
 });
+
+function loadCampusBitesChatbotAssets() {
+    if (window.__campusBitesChatbotAssetsLoaded) {
+        return;
+    }
+
+    window.__campusBitesChatbotAssetsLoaded = true;
+
+    if (!document.getElementById('campusBitesChatbotCss')) {
+        const css = document.createElement('link');
+        css.id = 'campusBitesChatbotCss';
+        css.rel = 'stylesheet';
+        css.href = 'chatbot.css';
+        document.head.appendChild(css);
+    }
+
+    if (!document.getElementById('campusBitesChatbotScript')) {
+        const script = document.createElement('script');
+        script.id = 'campusBitesChatbotScript';
+        script.src = 'chatbot.js';
+        script.defer = true;
+        document.body.appendChild(script);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.body?.dataset.disableChatbot === 'true') {
+        return;
+    }
+
+    loadCampusBitesChatbotAssets();
+});
