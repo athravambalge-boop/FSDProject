@@ -2,16 +2,13 @@
    LOAD MESSES WITH FILTERS
 ======================== */
 
-async function loadMess(search = '', location = '', minPrice = '', maxPrice = '', minRating = '') {
+async function loadMess(search = '', location = '') {
     try {
         showLoading();
 
         const params = new URLSearchParams();
         if (search) params.append('search', search);
         if (location) params.append('location', location);
-        if (minPrice) params.append('minPrice', minPrice);
-        if (maxPrice) params.append('maxPrice', maxPrice);
-        if (minRating) params.append('minRating', minRating);
 
         const url = params.toString()
             ? apiUrl(`mess?${params.toString()}`)
@@ -61,8 +58,6 @@ async function loadMess(search = '', location = '', minPrice = '', maxPrice = ''
                 <div class="mess-info">
                     <h2>${mess.name}</h2>
                     <p class="location">📍 ${mess.location}</p>
-                    <p class="price">₹${mess.monthly_price} / month</p>
-                    <p class="rating">⭐ ${mess.rating || 'N/A'}</p>
                     <button onclick="event.stopPropagation(); orderFood(${mess.mess_id})" style="background: linear-gradient(135deg, #27ae60, #2ecc71); margin-top: 10px;">
                         Order Food 🍽️
                     </button>
@@ -99,11 +94,8 @@ async function loadMess(search = '', location = '', minPrice = '', maxPrice = ''
 function applyFilters() {
     const search = document.getElementById('searchInput').value;
     const location = document.getElementById('locationFilter').value;
-    const minPrice = document.getElementById('minPrice').value;
-    const maxPrice = document.getElementById('maxPrice').value;
-    const minRating = document.getElementById('ratingFilter').value;
 
-    loadMess(search, location, minPrice, maxPrice, minRating);
+    loadMess(search, location);
 }
 
 /* ========================
@@ -174,13 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add live search for all filter fields
     const searchInput = document.getElementById('searchInput');
     const locationFilter = document.getElementById('locationFilter');
-    const minPrice = document.getElementById('minPrice');
-    const maxPrice = document.getElementById('maxPrice');
-    const ratingFilter = document.getElementById('ratingFilter');
 
     searchInput.addEventListener('keyup', debounceSearch);
     locationFilter.addEventListener('keyup', debounceSearch);
-    minPrice.addEventListener('change', applyFilters);
-    maxPrice.addEventListener('change', applyFilters);
-    ratingFilter.addEventListener('change', applyFilters);
 });

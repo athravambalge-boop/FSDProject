@@ -22,7 +22,7 @@
                 quick: ['Sign up help', 'Login help', 'What can I do here?']
             },
             'index.html': {
-                greet: 'Need help finding a mess? Ask about filters, prices, or how to place an order.',
+                greet: 'Need help finding a mess? Ask about search, location filters, or how to place an order.',
                 quick: ['How to filter messes?', 'Open order history', 'Track order #123']
             },
             'mess.html': {
@@ -72,7 +72,7 @@
             {
                 id: 'filter_messes',
                 match: ['how to filter messes', 'filter messes', 'mess filters'],
-                response: 'Use the search area on the home page. You can filter by name, location, min/max price, and rating, then click Search to get matching messes.'
+                response: 'Use the search area on the home page. You can filter by name and location, then click Search to get matching messes.'
             },
             {
                 id: 'open_order_history',
@@ -126,7 +126,7 @@
             {
                 id: 'admin',
                 match: ['admin', 'add mess', 'edit mess', 'contact number'],
-                response: 'Admin dashboard can add and edit mess records with location, veg type, price, and contact details.'
+                response: 'Admin dashboard can add and edit mess records with location, veg type, and contact details.'
             },
             {
                 id: 'login',

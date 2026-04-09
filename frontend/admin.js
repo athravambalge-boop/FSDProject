@@ -11,7 +11,7 @@ async function loadMess(){
         data.forEach(mess => {
             const div = document.createElement("div");
             div.innerHTML = `
-<b>${mess.name}</b> - ${mess.location} - ₹${mess.monthly_price}
+<b>${mess.name}</b> - ${mess.location}
 <div style="display: flex; gap: 5px; margin-left: auto;">
 <button onclick="openEditModal(${mess.mess_id})" style="width: auto; padding: 8px 12px; font-size: 12px; background: #3498db;">Edit</button>
 <button onclick="deleteMess(${mess.mess_id})" style="width: auto; padding: 8px 12px; font-size: 12px; background: #e74c3c;">Delete</button>
@@ -28,12 +28,23 @@ async function loadMess(){
 }
 
     const CHATBOT_INTENTS_KEY = 'campus_bites_chatbot_intents';
+    const CHATBOT_INTENT_LIMIT = 8000;
 
     function setIntentEditorMessage(text, isError = false) {
         const msg = document.getElementById('chatbotIntentMessage');
         if (!msg) return;
         msg.textContent = text;
         msg.style.color = isError ? '#c0392b' : '#1e8449';
+    }
+
+    function updateIntentCounter() {
+        const area = document.getElementById('chatbotIntentJson');
+        const counter = document.getElementById('chatbotIntentCounter');
+        if (!area || !counter) return;
+
+        const count = area.value.length;
+        counter.textContent = `${count} / ${CHATBOT_INTENT_LIMIT} characters`;
+        counter.style.color = count >= CHATBOT_INTENT_LIMIT * 0.9 ? '#c0392b' : '#5d6d7e';
     }
 
     async function loadChatbotIntentEditor() {
@@ -44,6 +55,7 @@ async function loadMess(){
         if (saved) {
             area.value = saved;
             setIntentEditorMessage('Loaded custom intent JSON from browser storage.');
+            updateIntentCounter();
             return;
         }
 
@@ -60,6 +72,8 @@ async function loadMess(){
             area.value = '{\n  "fallbackIntent": {\n    "greet": "Hi! I am Campus Bites bot.",\n    "quick": ["How to order?"]\n  },\n  "pageIntents": {},\n  "intentRules": []\n}';
             setIntentEditorMessage('Default file not reachable. Using fallback JSON skeleton.', true);
         }
+
+        updateIntentCounter();
     }
 
     function validateIntentConfig(value) {
@@ -96,6 +110,7 @@ async function loadMess(){
         if (!area) return;
         area.value = JSON.stringify(config, null, 2);
         setIntentEditorMessage(successMessage || 'Editor updated.');
+        updateIntentCounter();
     }
 
     function formatChatbotIntentJson() {
@@ -171,6 +186,7 @@ async function loadMess(){
             localStorage.setItem(CHATBOT_INTENTS_KEY, pretty);
             area.value = pretty;
             setIntentEditorMessage('Intent JSON saved. Reload any page to apply chatbot changes.');
+            updateIntentCounter();
         } catch (error) {
             setIntentEditorMessage(`Invalid JSON: ${error.message}`, true);
         }
@@ -208,7 +224,6 @@ async function addMess(){
     try {
         const name = document.getElementById("name").value;
         const location = document.getElementById("location").value;
-        const price = document.getElementById("price").value;
         const veg_type = document.getElementById("veg_type").value;
         const contact_number = document.getElementById("contact_number").value;
 
@@ -220,7 +235,6 @@ async function addMess(){
             body:JSON.stringify({
                 name,
                 location,
-                price,
                 veg_type,
                 contact_number
             })
@@ -229,7 +243,6 @@ async function addMess(){
         if (res.ok) {
             document.getElementById("name").value = "";
             document.getElementById("location").value = "";
-            document.getElementById("price").value = "";
             document.getElementById("veg_type").value = "";
             document.getElementById("contact_number").value = "";
             loadMess();
@@ -258,6 +271,14 @@ async function deleteMess(id){
 loadMess();
 loadChatbotIntentEditor();
 
+document.addEventListener('DOMContentLoaded', () => {
+    const area = document.getElementById('chatbotIntentJson');
+    if (!area) return;
+
+    area.addEventListener('input', updateIntentCounter);
+    updateIntentCounter();
+});
+
 // Edit Modal Functions
 async function openEditModal(messId) {
     try {
@@ -271,10 +292,8 @@ async function openEditModal(messId) {
         document.getElementById("editMessId").value = messId;
         document.getElementById("editName").value = mess.name;
         document.getElementById("editLocation").value = mess.location;
-        document.getElementById("editPrice").value = mess.monthly_price;
         document.getElementById("editVegType").value = mess.veg_type;
         document.getElementById("editContact").value = mess.contact_number;
-        document.getElementById("editRating").value = mess.rating;
         
         document.getElementById("editModal").style.display = "block";
     } catch (error) {
@@ -292,10 +311,8 @@ async function saveEditMess() {
         const messId = document.getElementById("editMessId").value;
         const name = document.getElementById("editName").value;
         const location = document.getElementById("editLocation").value;
-        const monthly_price = document.getElementById("editPrice").value;
         const veg_type = document.getElementById("editVegType").value;
         const contact_number = document.getElementById("editContact").value;
-        const rating = document.getElementById("editRating").value;
 
         const res = await fetch(apiUrl(`mess/${messId}`), {
             method: "PUT",
@@ -305,10 +322,8 @@ async function saveEditMess() {
             body: JSON.stringify({
                 name,
                 location,
-                monthly_price,
                 veg_type,
-                contact_number,
-                rating
+                contact_number
             })
         });
 
@@ -326,9 +341,9 @@ async function saveEditMess() {
 }
 
 // Close modal when clicking outside
-window.onclick = function(event) {
+window.addEventListener('click', function(event) {
     const modal = document.getElementById("editModal");
     if (event.target === modal) {
-        modal.style.display = "none";
+        closeEditModal();
     }
-}
+});

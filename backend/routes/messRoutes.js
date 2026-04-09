@@ -11,7 +11,7 @@ router.get("/", async (req, res) => {
 
 try{
 
-const { search, minPrice, maxPrice, minRating, location } = req.query;
+const { search, location } = req.query;
 let query = "SELECT * FROM mess WHERE 1=1";
 const params = [];
 
@@ -28,24 +28,7 @@ if (location) {
   params.push(`%${location}%`);
 }
 
-// Filter by price range
-if (minPrice) {
-  query += " AND monthly_price >= ?";
-  params.push(parseFloat(minPrice));
-}
-
-if (maxPrice) {
-  query += " AND monthly_price <= ?";
-  params.push(parseFloat(maxPrice));
-}
-
-// Filter by minimum rating
-if (minRating) {
-  query += " AND rating >= ?";
-  params.push(parseFloat(minRating));
-}
-
-query += " ORDER BY rating DESC";
+query += " ORDER BY name ASC";
 
 const [rows] = await db.query(query, params);
 
@@ -185,13 +168,13 @@ router.put("/:id", async (req, res) => {
 
 try{
 
-const {name, location, monthly_price, veg_type, contact_number, rating} = req.body;
+const {name, location, veg_type, contact_number} = req.body;
 
 await db.query(
 `UPDATE mess 
-SET name=?, location=?, monthly_price=?, veg_type=?, contact_number=?, rating=? 
+SET name=?, location=?, veg_type=?, contact_number=? 
 WHERE mess_id=?`,
-[name, location, monthly_price, veg_type, contact_number, rating, req.params.id]
+[name, location, veg_type, contact_number, req.params.id]
 );
 
 res.json({message:"Mess updated successfully"});
@@ -290,11 +273,11 @@ router.post("/", async (req,res)=>{
 
 try{
 
-const {name,location,price,veg_type,contact_number} = req.body;
+const {name,location,veg_type,contact_number} = req.body;
 
 await db.query(
-"INSERT INTO mess(name,location,monthly_price,veg_type,contact_number,rating) VALUES(?,?,?,?,?,?)",
-[name,location,price,veg_type || "Veg",contact_number || "N/A",4.0]
+"INSERT INTO mess(name,location,veg_type,contact_number) VALUES(?,?,?,?)",
+[name,location,veg_type || "Veg",contact_number || "N/A"]
 );
 
 res.json({message:"Mess added successfully"});

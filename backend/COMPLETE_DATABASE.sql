@@ -32,17 +32,14 @@ CREATE TABLE IF NOT EXISTS mess (
     mess_id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
     location VARCHAR(200) NOT NULL,
-    monthly_price DECIMAL(10, 2) NOT NULL,
     veg_type ENUM('Veg', 'Non-Veg', 'Mixed') NOT NULL,
     contact_number VARCHAR(20),
-    rating DECIMAL(3, 1) DEFAULT 0,
     owner_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (owner_id) REFERENCES users(user_id),
     INDEX idx_name (name),
-    INDEX idx_location (location),
-    INDEX idx_rating (rating)
+    INDEX idx_location (location)
 );
 
 -- ============================================================
@@ -248,10 +245,10 @@ INSERT INTO users (username, password, phone, role) VALUES
 ('admin', 'admin123', '9999999999', 'admin');
 
 -- Insert sample messes
-INSERT INTO mess (name, location, monthly_price, veg_type, contact_number, rating, owner_id) VALUES 
-('Golden Mess', 'Near Station', 3000, 'Mixed', '9876543210', 4.5, NULL),
-('Pure Veg Mess', 'City Center', 2500, 'Veg', '9876543211', 4.2, NULL),
-('Non-Veg Paradise', 'Market Area', 3500, 'Non-Veg', '9876543212', 4.8, NULL);
+INSERT INTO mess (name, location, veg_type, contact_number, owner_id) VALUES 
+('Golden Mess', 'Near Station', 'Mixed', '9876543210', NULL),
+('Pure Veg Mess', 'City Center', 'Veg', '9876543211', NULL),
+('Non-Veg Paradise', 'Market Area', 'Non-Veg', '9876543212', NULL);
 
 -- Insert sample menu items
 INSERT INTO menu_items (mess_id, item_name, item_price, category, description) VALUES 
