@@ -307,10 +307,53 @@ async function ensureAuthSchema() {
    `);
 }
 
+async function ensureBaseSchema() {
+   const [tables] = await db.query(
+      `SELECT TABLE_NAME
+       FROM information_schema.TABLES
+       WHERE TABLE_SCHEMA = DATABASE()
+         AND TABLE_NAME IN ('users', 'mess', 'menu_items', 'orders', 'customers')`
+   );
+
+   const requiredTables = new Set(['users', 'mess', 'menu_items', 'orders', 'customers']);
+   const existingTables = new Set(tables.map((row) => row.TABLE_NAME));
+   const isFreshDatabase = [...requiredTables].every((tableName) => !existingTables.has(tableName));
+
+   if (tables.length >= 5) {
+      return;
+   }
+
+   const schemaPath = path.join(__dirname, "COMPLETE_DATABASE.sql");
+   const schemaText = fs.readFileSync(schemaPath, "utf8");
+   const strippedText = schemaText
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .split(/\r?\n/)
+      .map((line) => line.replace(/--.*$/, "").trim())
+      .filter(Boolean)
+      .join("\n");
+
+   const statements = strippedText
+      .split(";")
+      .map((statement) => statement.trim())
+      .filter(Boolean)
+      .filter((statement) => {
+         const upper = statement.toUpperCase();
+         return !upper.startsWith("CREATE DATABASE") && !upper.startsWith("USE ") && !upper.startsWith("DESCRIBE ");
+      });
+
+   for (const statement of statements) {
+      if (!isFreshDatabase && statement.toUpperCase().startsWith("INSERT INTO ")) {
+         continue;
+      }
+
+      await db.query(statement);
+   }
+}
+
 /* -------------------------
    START SERVER
 --------------------------*/
-Promise.all([ensureWalletSchema(), ensurePaymentSchema(), ensureAuthSchema()])
+Promise.all([ensureBaseSchema(), ensureWalletSchema(), ensurePaymentSchema(), ensureAuthSchema()])
    .then(() => {
       const proofDir = path.join(__dirname, "uploads", "payment-proofs");
       if (!fs.existsSync(proofDir)) {
