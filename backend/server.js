@@ -8,6 +8,9 @@ const db = require("./config/db");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const frontendDir = path.join(__dirname, "..", "frontend");
+
+app.set("trust proxy", 1);
 
 function buildAllowedOrigins() {
    const defaults = [
@@ -71,6 +74,7 @@ app.use(
 
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use(express.static(frontendDir));
 
 /* -------------------------
    ROUTES
@@ -88,7 +92,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
 
 app.get("/", (req, res) => {
-  res.send("Backend running successfully");
+   res.sendFile(path.join(frontendDir, "landing.html"));
 });
 
 async function ensureWalletSchema() {

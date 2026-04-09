@@ -8,13 +8,18 @@ const db = require("../config/db");
 const router = express.Router();
 
 const PAYMENT_CURRENCY = process.env.PAYMENT_CURRENCY || "INR";
-const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL || "http://localhost:5000";
 const MANUAL_PAYMENT_UPI_ID = process.env.MANUAL_PAYMENT_UPI_ID || "athravambalge@okaxis";
 const MANUAL_PAYMENT_ACCOUNT_NAME = process.env.MANUAL_PAYMENT_ACCOUNT_NAME || "ATHARVA PRASHANT AMBALGE";
 const MANUAL_PAYMENT_ACCOUNT_NO = process.env.MANUAL_PAYMENT_ACCOUNT_NO || "000000000000";
 const MANUAL_PAYMENT_IFSC = process.env.MANUAL_PAYMENT_IFSC || "BANK0000000";
 const MANUAL_PAYMENT_QR_IMAGE_URL = process.env.MANUAL_PAYMENT_QR_IMAGE_URL || "QR.jpeg";
 const PROOF_UPLOAD_DIR = path.join(__dirname, "..", "uploads", "payment-proofs");
+
+function getBackendBaseUrl(req) {
+  const forwardedProto = String(req.get("x-forwarded-proto") || "").split(",")[0].trim();
+  const protocol = forwardedProto || (req.secure ? "https" : "http") || "http";
+  return (process.env.BACKEND_BASE_URL || `${protocol}://${req.get("host")}`).replace(/\/+$/, "");
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -216,7 +221,7 @@ router.post("/upload-proof", upload.single("receipt"), async (req, res) => {
       order_id: orderId,
       payment_status: "paid",
       payment_proof_status: "verified",
-      proof_image_url: `${BACKEND_BASE_URL}/uploads/${relativePath}`,
+      proof_image_url: `${getBackendBaseUrl(req)}/uploads/${relativePath}`,
       checks: {
         paid_to_match: true,
         amount_match: true,

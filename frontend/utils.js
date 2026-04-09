@@ -101,6 +101,7 @@ function formatPhone(phone) {
 ======================== */
 
 const IS_LOCAL_HOST = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const IS_FILE_PROTOCOL = window.location.protocol === 'file:';
 
 function isLoopbackOrigin(url) {
     return /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(String(url || ''));
@@ -110,7 +111,7 @@ const API_ORIGIN = (() => {
     const override = window.API_ORIGIN || localStorage.getItem('api_origin');
 
     // In local development, always use local backend unless explicitly overridden via window.API_ORIGIN.
-    if (IS_LOCAL_HOST && !window.API_ORIGIN) {
+    if ((IS_LOCAL_HOST || IS_FILE_PROTOCOL) && !window.API_ORIGIN) {
         return 'http://localhost:5000';
     }
 
@@ -123,12 +124,11 @@ const API_ORIGIN = (() => {
         return cleaned;
     }
 
-    if (IS_LOCAL_HOST) {
+    if (IS_LOCAL_HOST || IS_FILE_PROTOCOL) {
         return 'http://localhost:5000';
     }
 
-    // Set localStorage.setItem('api_origin', 'https://your-backend-domain.com') after deploying backend.
-    return 'https://your-backend-domain.com';
+    return window.location.origin.replace(/\/+$/, '');
 })();
 
 const IS_PLACEHOLDER_API = API_ORIGIN.includes('your-backend-domain.com');
