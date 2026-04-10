@@ -305,6 +305,23 @@ async function ensureAuthSchema() {
          INDEX idx_visitor_otps_expires_at (expires_at)
       )
    `);
+
+   await db.query(`
+      CREATE TABLE IF NOT EXISTS password_reset_otps (
+         reset_otp_id INT AUTO_INCREMENT PRIMARY KEY,
+         user_id INT NOT NULL,
+         identifier VARCHAR(150) NOT NULL,
+         contact_type ENUM('phone', 'email') NOT NULL,
+         otp_code VARCHAR(6) NOT NULL,
+         expires_at DATETIME NOT NULL,
+         consumed_at DATETIME NULL,
+         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+         INDEX idx_password_reset_identifier (identifier),
+         INDEX idx_password_reset_contact_type (contact_type),
+         INDEX idx_password_reset_expires_at (expires_at),
+         CONSTRAINT fk_password_reset_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+      )
+   `);
 }
 
 async function ensureBaseSchema() {

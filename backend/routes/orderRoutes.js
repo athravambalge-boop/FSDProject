@@ -464,7 +464,7 @@ router.delete("/:mess_id/all", async (req, res) => {
     }
 
     const [ownerRows] = await db.query(
-      `SELECT id
+      `SELECT 1
        FROM users
        WHERE role = 'owner'
          AND mess_id = ?

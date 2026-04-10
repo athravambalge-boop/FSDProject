@@ -247,6 +247,24 @@ CREATE TABLE IF NOT EXISTS visitor_otps (
     INDEX idx_visitor_otps_expires_at (expires_at)
 );
 
+-- ============================================================
+-- 13. PASSWORD_RESET_OTPS TABLE (For OTP-based password reset)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS password_reset_otps (
+    reset_otp_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    identifier VARCHAR(150) NOT NULL,
+    contact_type ENUM('phone', 'email') NOT NULL,
+    otp_code VARCHAR(6) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    consumed_at DATETIME,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX idx_password_reset_identifier (identifier),
+    INDEX idx_password_reset_contact_type (contact_type),
+    INDEX idx_password_reset_expires_at (expires_at)
+);
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
@@ -270,3 +288,4 @@ DESCRIBE favorites;
 DESCRIBE promos;
 DESCRIBE reviews;
 DESCRIBE visitor_otps;
+DESCRIBE password_reset_otps;

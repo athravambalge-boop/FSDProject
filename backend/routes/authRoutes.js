@@ -6,6 +6,14 @@ const router = express.Router();
 
 const OTP_EXPIRY_MINUTES = 10;
 
+function validateUsername(username) {
+  return /^[a-zA-Z0-9_]{3,30}$/.test(String(username || "").trim());
+}
+
+function validatePassword(password) {
+  return typeof password === "string" && password.length >= 6 && password.length <= 100;
+}
+
 function validatePhone(phone) {
   return /^[0-9]{10}$/.test(phone);
 }
@@ -36,19 +44,32 @@ function buildContactPayload(contactType, value) {
   return { phone: null, email, identifier: email };
 }
 
-function generateVisitorUsername(contactType, identifier) {
-  const safeIdentifier = String(identifier)
-    .replace(/[^a-zA-Z0-9]/g, "_")
-    .slice(0, 40);
-
-  return `visitor_${contactType}_${safeIdentifier}_${Date.now().toString().slice(-6)}`;
-}
-
 async function findExistingUser(connection, contactType, identifier) {
   const column = contactType === "phone" ? "phone" : "email";
   const [rows] = await connection.query(
-    `SELECT id, role FROM users WHERE ${column} = ? LIMIT 1`,
+    `SELECT user_id, role FROM users WHERE ${column} = ? LIMIT 1`,
     [identifier]
+  );
+
+  return rows[0] || null;
+}
+
+async function getUserByContact(connection, contactType, identifier) {
+  const column = contactType === "phone" ? "phone" : "email";
+  const [rows] = await connection.query(
+    `SELECT user_id, username, role, phone, email FROM users WHERE ${column} = ? LIMIT 1`,
+    [identifier]
+  );
+  return rows[0] || null;
+}
+
+async function getUserByUsername(connection, username) {
+  const [rows] = await connection.query(
+    `SELECT user_id, username, role, phone, email
+     FROM users
+     WHERE username = ?
+     LIMIT 1`,
+    [String(username || "").trim()]
   );
 
   return rows[0] || null;
@@ -150,7 +171,6 @@ router.post("/request-signup-otp", async (req, res) => {
 
 /* VERIFY SIGNUP OTP */
 router.post("/verify-signup-otp", async (req, res) => {
-  let connection;
   try {
     const { fullName, contactType, contactValue, otp } = req.body;
 
@@ -177,15 +197,111 @@ router.post("/verify-signup-otp", async (req, res) => {
       return res.status(400).json({ error: "Please enter a valid email address." });
     }
 
+    const existingUser = await findExistingUser(db, contactType, identifier);
+    if (existingUser) {
+      return res.status(409).json({
+        error: `An account already exists for this ${contactType}.`
+      });
+    }
+
+    const [otpRows] = await db.query(
+      `SELECT otp_id
+       FROM visitor_otps
+       WHERE identifier = ?
+         AND contact_type = ?
+         AND otp_code = ?
+         AND consumed_at IS NULL
+         AND expires_at >= NOW()
+       ORDER BY created_at DESC
+       LIMIT 1
+       FOR UPDATE`,
+      [identifier, contactType, normalizedOtp]
+    );
+
+    if (otpRows.length === 0) {
+      return res.status(400).json({ error: "Invalid or expired OTP." });
+    }
+
+    res.json({
+      message: "OTP verified. You can now set username and password.",
+      verified: true
+    });
+  } catch (err) {
+    console.error("OTP verification error:", err);
+    res.status(500).json({
+      error: "Failed to verify OTP. Please try again.",
+      details: process.env.NODE_ENV === "production" ? undefined : err.message
+    });
+  }
+});
+
+/* COMPLETE SIGNUP AFTER OTP VERIFICATION */
+router.post("/complete-signup", async (req, res) => {
+  let connection;
+  try {
+    const {
+      fullName,
+      contactType,
+      contactValue,
+      otp,
+      username,
+      password,
+      confirmPassword
+    } = req.body;
+
+    if (!validateName(fullName)) {
+      return res.status(400).json({ error: "Name must be between 2 and 100 characters." });
+    }
+
+    if (!["phone", "email"].includes(contactType)) {
+      return res.status(400).json({ error: "Contact type must be either phone or email." });
+    }
+
+    const normalizedOtp = String(otp || "").trim();
+    if (!/^\d{6}$/.test(normalizedOtp)) {
+      return res.status(400).json({ error: "OTP must be a 6-digit number." });
+    }
+
+    const normalizedUsername = String(username || "").trim();
+    if (!validateUsername(normalizedUsername)) {
+      return res.status(400).json({ error: "Username must be 3-30 characters and can only include letters, numbers, and underscore." });
+    }
+
+    if (!validatePassword(password)) {
+      return res.status(400).json({ error: "Password must be between 6 and 100 characters." });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: "Password and confirm password do not match." });
+    }
+
+    const { phone, email, identifier } = buildContactPayload(contactType, contactValue);
+
+    if (contactType === "phone" && !validatePhone(identifier)) {
+      return res.status(400).json({ error: "Please enter a valid 10-digit phone number." });
+    }
+
+    if (contactType === "email" && !validateEmail(identifier)) {
+      return res.status(400).json({ error: "Please enter a valid email address." });
+    }
+
     connection = await db.getConnection();
     await connection.beginTransaction();
+
+    const [usernameRows] = await connection.query(
+      `SELECT 1 FROM users WHERE username = ? LIMIT 1`,
+      [normalizedUsername]
+    );
+
+    if (usernameRows.length > 0) {
+      await connection.rollback();
+      return res.status(409).json({ error: "Username already exists. Please choose another one." });
+    }
 
     const existingUser = await findExistingUser(connection, contactType, identifier);
     if (existingUser) {
       await connection.rollback();
-      return res.status(409).json({
-        error: `An account already exists for this ${contactType}.`
-      });
+      return res.status(409).json({ error: `An account already exists for this ${contactType}.` });
     }
 
     const [otpRows] = await connection.query(
@@ -207,13 +323,10 @@ router.post("/verify-signup-otp", async (req, res) => {
       return res.status(400).json({ error: "Invalid or expired OTP." });
     }
 
-    const username = generateVisitorUsername(contactType, identifier);
-    const generatedPassword = crypto.randomBytes(12).toString("hex");
-
     const [insertResult] = await connection.query(
       `INSERT INTO users (username, password, phone, email, role)
        VALUES (?, ?, ?, ?, 'visitor')`,
-      [username, generatedPassword, phone, email]
+      [normalizedUsername, password, phone, email]
     );
 
     if (phone) {
@@ -243,16 +356,409 @@ router.post("/verify-signup-otp", async (req, res) => {
         phone,
         email,
         contact: phone || email,
-        username
+        username: normalizedUsername
       }
     });
   } catch (err) {
     if (connection) {
       await connection.rollback();
     }
-    console.error("OTP verification error:", err);
+    console.error("Complete signup error:", err);
+    res.status(500).json({
+      error: "Failed to complete signup. Please try again.",
+      details: process.env.NODE_ENV === "production" ? undefined : err.message
+    });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+});
+
+/* REQUEST PASSWORD RESET OTP */
+router.post("/request-password-reset-otp", async (req, res) => {
+  try {
+    const { contactType, contactValue } = req.body;
+
+    if (!["phone", "email"].includes(contactType)) {
+      return res.status(400).json({ error: "Contact type must be either phone or email." });
+    }
+
+    const { identifier } = buildContactPayload(contactType, contactValue);
+
+    if (contactType === "phone" && !validatePhone(identifier)) {
+      return res.status(400).json({ error: "Please enter a valid 10-digit phone number." });
+    }
+
+    if (contactType === "email" && !validateEmail(identifier)) {
+      return res.status(400).json({ error: "Please enter a valid email address." });
+    }
+
+    const user = await getUserByContact(db, contactType, identifier);
+    if (!user) {
+      return res.status(404).json({ error: "No account found for this contact." });
+    }
+
+    const otpCode = String(crypto.randomInt(100000, 1000000));
+
+    await db.query(
+      `UPDATE password_reset_otps
+       SET consumed_at = CURRENT_TIMESTAMP
+       WHERE identifier = ? AND contact_type = ? AND consumed_at IS NULL`,
+      [identifier, contactType]
+    );
+
+    await db.query(
+      `INSERT INTO password_reset_otps (user_id, identifier, contact_type, otp_code, expires_at)
+       VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
+      [user.user_id, identifier, contactType, otpCode, OTP_EXPIRY_MINUTES]
+    );
+
+    console.log(`[DEV OTP] ${contactType.toUpperCase()} password reset OTP for ${identifier}: ${otpCode}`);
+
+    res.json({
+      message: `Password reset OTP generated for your ${contactType}.`,
+      expiresInMinutes: OTP_EXPIRY_MINUTES,
+      devOtp: process.env.NODE_ENV === "production" ? undefined : otpCode
+    });
+  } catch (err) {
+    console.error("Password reset OTP request error:", err);
+    res.status(500).json({
+      error: "Failed to generate password reset OTP. Please try again.",
+      details: process.env.NODE_ENV === "production" ? undefined : err.message
+    });
+  }
+});
+
+/* REQUEST PASSWORD RESET OTP BY USERNAME */
+router.post("/request-password-reset-by-username", async (req, res) => {
+  try {
+    const username = String(req.body?.username || "").trim();
+
+    if (!validateUsername(username)) {
+      return res.status(400).json({ error: "Please enter a valid username." });
+    }
+
+    const user = await getUserByUsername(db, username);
+    if (!user) {
+      return res.status(404).json({ error: "No account found for this username." });
+    }
+
+    const normalizedPhone = normalizePhone(user.phone || "");
+    const normalizedEmail = normalizeEmail(user.email || "");
+
+    let contactType = "";
+    let identifier = "";
+
+    if (validatePhone(normalizedPhone)) {
+      contactType = "phone";
+      identifier = normalizedPhone;
+    } else if (validateEmail(normalizedEmail)) {
+      contactType = "email";
+      identifier = normalizedEmail;
+    } else {
+      return res.status(400).json({
+        error: "No valid phone number or email is registered for this account."
+      });
+    }
+
+    const otpCode = String(crypto.randomInt(100000, 1000000));
+
+    await db.query(
+      `UPDATE password_reset_otps
+       SET consumed_at = CURRENT_TIMESTAMP
+       WHERE user_id = ? AND consumed_at IS NULL`,
+      [user.user_id]
+    );
+
+    await db.query(
+      `INSERT INTO password_reset_otps (user_id, identifier, contact_type, otp_code, expires_at)
+       VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
+      [user.user_id, identifier, contactType, otpCode, OTP_EXPIRY_MINUTES]
+    );
+
+    console.log(`[DEV OTP] ${contactType.toUpperCase()} password reset OTP for ${username}: ${otpCode}`);
+
+    res.json({
+      message: `OTP sent to registered ${contactType === "phone" ? "phone number" : "email"}.`,
+      deliveryMethod: contactType,
+      expiresInMinutes: OTP_EXPIRY_MINUTES,
+      devOtp: process.env.NODE_ENV === "production" ? undefined : otpCode
+    });
+  } catch (err) {
+    console.error("Password reset by username error:", err);
+    res.status(500).json({
+      error: "Failed to generate password reset OTP. Please try again.",
+      details: process.env.NODE_ENV === "production" ? undefined : err.message
+    });
+  }
+});
+
+/* VERIFY PASSWORD RESET OTP BY USERNAME */
+router.post("/verify-password-reset-by-username", async (req, res) => {
+  try {
+    const username = String(req.body?.username || "").trim();
+    const normalizedOtp = String(req.body?.otp || "").trim();
+
+    if (!validateUsername(username)) {
+      return res.status(400).json({ error: "Please enter a valid username." });
+    }
+
+    if (!/^\d{6}$/.test(normalizedOtp)) {
+      return res.status(400).json({ error: "OTP must be a 6-digit number." });
+    }
+
+    const user = await getUserByUsername(db, username);
+    if (!user) {
+      return res.status(404).json({ error: "No account found for this username." });
+    }
+
+    const [otpRows] = await db.query(
+      `SELECT reset_otp_id
+       FROM password_reset_otps
+       WHERE user_id = ?
+         AND otp_code = ?
+         AND consumed_at IS NULL
+         AND expires_at >= NOW()
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [user.user_id, normalizedOtp]
+    );
+
+    if (otpRows.length === 0) {
+      return res.status(400).json({ error: "Invalid or expired OTP." });
+    }
+
+    res.json({
+      message: "OTP verified. You can now set a new password.",
+      verified: true
+    });
+  } catch (err) {
+    console.error("Verify password reset by username error:", err);
     res.status(500).json({
       error: "Failed to verify OTP. Please try again.",
+      details: process.env.NODE_ENV === "production" ? undefined : err.message
+    });
+  }
+});
+
+/* RESET PASSWORD BY USERNAME */
+router.post("/reset-password-by-username", async (req, res) => {
+  let connection;
+  try {
+    const username = String(req.body?.username || "").trim();
+    const normalizedOtp = String(req.body?.otp || "").trim();
+    const { newPassword, confirmPassword } = req.body;
+
+    if (!validateUsername(username)) {
+      return res.status(400).json({ error: "Please enter a valid username." });
+    }
+
+    if (!/^\d{6}$/.test(normalizedOtp)) {
+      return res.status(400).json({ error: "OTP must be a 6-digit number." });
+    }
+
+    if (!validatePassword(newPassword)) {
+      return res.status(400).json({ error: "Password must be between 6 and 100 characters." });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: "Password and confirm password do not match." });
+    }
+
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const user = await getUserByUsername(connection, username);
+    if (!user) {
+      await connection.rollback();
+      return res.status(404).json({ error: "No account found for this username." });
+    }
+
+    const [otpRows] = await connection.query(
+      `SELECT reset_otp_id
+       FROM password_reset_otps
+       WHERE user_id = ?
+         AND otp_code = ?
+         AND consumed_at IS NULL
+         AND expires_at >= NOW()
+       ORDER BY created_at DESC
+       LIMIT 1
+       FOR UPDATE`,
+      [user.user_id, normalizedOtp]
+    );
+
+    if (otpRows.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({ error: "Invalid or expired OTP." });
+    }
+
+    await connection.query(
+      `UPDATE users
+       SET password = ?
+       WHERE user_id = ?`,
+      [newPassword, user.user_id]
+    );
+
+    await connection.query(
+      `UPDATE password_reset_otps
+       SET consumed_at = CURRENT_TIMESTAMP
+       WHERE reset_otp_id = ?`,
+      [otpRows[0].reset_otp_id]
+    );
+
+    await connection.commit();
+
+    res.json({ message: "Password reset successful." });
+  } catch (err) {
+    if (connection) {
+      await connection.rollback();
+    }
+    console.error("Reset password by username error:", err);
+    res.status(500).json({
+      error: "Failed to reset password. Please try again.",
+      details: process.env.NODE_ENV === "production" ? undefined : err.message
+    });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+});
+
+/* VERIFY PASSWORD RESET OTP */
+router.post("/verify-password-reset-otp", async (req, res) => {
+  try {
+    const { contactType, contactValue, otp } = req.body;
+
+    if (!["phone", "email"].includes(contactType)) {
+      return res.status(400).json({ error: "Contact type must be either phone or email." });
+    }
+
+    const normalizedOtp = String(otp || "").trim();
+    if (!/^\d{6}$/.test(normalizedOtp)) {
+      return res.status(400).json({ error: "OTP must be a 6-digit number." });
+    }
+
+    const { identifier } = buildContactPayload(contactType, contactValue);
+
+    if (contactType === "phone" && !validatePhone(identifier)) {
+      return res.status(400).json({ error: "Please enter a valid 10-digit phone number." });
+    }
+
+    if (contactType === "email" && !validateEmail(identifier)) {
+      return res.status(400).json({ error: "Please enter a valid email address." });
+    }
+
+    const [otpRows] = await db.query(
+      `SELECT reset_otp_id
+       FROM password_reset_otps
+       WHERE identifier = ?
+         AND contact_type = ?
+         AND otp_code = ?
+         AND consumed_at IS NULL
+         AND expires_at >= NOW()
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [identifier, contactType, normalizedOtp]
+    );
+
+    if (otpRows.length === 0) {
+      return res.status(400).json({ error: "Invalid or expired OTP." });
+    }
+
+    res.json({
+      message: "OTP verified. You can now set a new password.",
+      verified: true
+    });
+  } catch (err) {
+    console.error("Password reset OTP verify error:", err);
+    res.status(500).json({
+      error: "Failed to verify password reset OTP. Please try again.",
+      details: process.env.NODE_ENV === "production" ? undefined : err.message
+    });
+  }
+});
+
+/* RESET PASSWORD */
+router.post("/reset-password", async (req, res) => {
+  let connection;
+  try {
+    const { contactType, contactValue, otp, newPassword, confirmPassword } = req.body;
+
+    if (!["phone", "email"].includes(contactType)) {
+      return res.status(400).json({ error: "Contact type must be either phone or email." });
+    }
+
+    const normalizedOtp = String(otp || "").trim();
+    if (!/^\d{6}$/.test(normalizedOtp)) {
+      return res.status(400).json({ error: "OTP must be a 6-digit number." });
+    }
+
+    if (!validatePassword(newPassword)) {
+      return res.status(400).json({ error: "Password must be between 6 and 100 characters." });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ error: "Password and confirm password do not match." });
+    }
+
+    const { identifier } = buildContactPayload(contactType, contactValue);
+
+    if (contactType === "phone" && !validatePhone(identifier)) {
+      return res.status(400).json({ error: "Please enter a valid 10-digit phone number." });
+    }
+
+    if (contactType === "email" && !validateEmail(identifier)) {
+      return res.status(400).json({ error: "Please enter a valid email address." });
+    }
+
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const [otpRows] = await connection.query(
+      `SELECT reset_otp_id, user_id
+       FROM password_reset_otps
+       WHERE identifier = ?
+         AND contact_type = ?
+         AND otp_code = ?
+         AND consumed_at IS NULL
+         AND expires_at >= NOW()
+       ORDER BY created_at DESC
+       LIMIT 1
+       FOR UPDATE`,
+      [identifier, contactType, normalizedOtp]
+    );
+
+    if (otpRows.length === 0) {
+      await connection.rollback();
+      return res.status(400).json({ error: "Invalid or expired OTP." });
+    }
+
+    await connection.query(
+      `UPDATE users
+       SET password = ?
+       WHERE user_id = ?`,
+      [newPassword, otpRows[0].user_id]
+    );
+
+    await connection.query(
+      `UPDATE password_reset_otps
+       SET consumed_at = CURRENT_TIMESTAMP
+       WHERE reset_otp_id = ?`,
+      [otpRows[0].reset_otp_id]
+    );
+
+    await connection.commit();
+
+    res.json({ message: "Password reset successful." });
+  } catch (err) {
+    if (connection) {
+      await connection.rollback();
+    }
+    console.error("Reset password error:", err);
+    res.status(500).json({
+      error: "Failed to reset password. Please try again.",
       details: process.env.NODE_ENV === "production" ? undefined : err.message
     });
   } finally {

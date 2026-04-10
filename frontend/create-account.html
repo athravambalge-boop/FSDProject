@@ -39,12 +39,19 @@
             <input type="text" id="otpInput" placeholder="Enter 6-digit OTP" inputmode="numeric" maxlength="6">
             <div class="auth-helper" id="otpMessage" hidden></div>
             <div class="auth-helper warning" id="devOtpHint" hidden></div>
-            <button onclick="verifyOtp()">Verify OTP and Create Account</button>
+            <button id="verifyOtpBtn" onclick="verifyOtp()">Verify OTP</button>
             <button class="secondary-btn" onclick="requestOtp()">Resend OTP</button>
+
+            <div id="credentialsSection" hidden>
+                <input type="text" id="signupUsername" placeholder="Choose username (3-30 chars, letters/numbers/_)">
+                <input type="password" id="signupPassword" placeholder="Set password (min 6 chars)">
+                <input type="password" id="signupConfirmPassword" placeholder="Confirm password">
+                <button onclick="completeSignup()">Create Account</button>
+            </div>
         </div>
 
         <p class="auth-footer-link">
-            Already have an owner account? <a href="login.html">Go to login</a>
+            Already have an account? <a href="login.html">Go to login</a>
         </p>
     </div>
 

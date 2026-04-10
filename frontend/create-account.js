@@ -1,5 +1,7 @@
 let contactMode = 'phone';
 let pendingSignup = null;
+let otpVerified = false;
+let verifiedOtp = '';
 
 function setContactMode(mode) {
     contactMode = mode === 'email' ? 'email' : 'phone';
@@ -100,9 +102,12 @@ async function requestOtp() {
         }
 
         pendingSignup = payload;
+        otpVerified = false;
+        verifiedOtp = '';
         otpSection.hidden = false;
         otpMessage.hidden = false;
         otpMessage.textContent = `Enter the OTP within ${data.expiresInMinutes || 10} minutes to complete your account setup.`;
+        document.getElementById('credentialsSection').hidden = true;
 
         if (data.devOtp) {
             devOtpHint.hidden = false;
@@ -157,14 +162,87 @@ async function verifyOtp() {
             return;
         }
 
-        const account = data.account || {};
+        otpVerified = true;
+        verifiedOtp = otp;
+
+        const credentialsSection = document.getElementById('credentialsSection');
+        credentialsSection.hidden = false;
+        document.getElementById('signupUsername').focus();
+
+        showToast('OTP verified. Now set your username and password.', 'success');
+    } catch (error) {
+        console.error('OTP verification error:', error);
+        hideLoading();
+        showError(`Unable to connect to the backend. Check backend URL: ${API_ORIGIN}`);
+        showToast('Backend connection failed.', 'error');
+    }
+}
+
+async function completeSignup() {
+    const payload = pendingSignup || validateSignupInput();
+    if (!payload) return;
+
+    if (!otpVerified || !verifiedOtp) {
+        showError('Please verify OTP before creating account.');
+        return;
+    }
+
+    const username = document.getElementById('signupUsername').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    const confirmPassword = document.getElementById('signupConfirmPassword').value;
+
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
+        showError('Username must be 3-30 characters and only letters, numbers, underscore.');
+        return;
+    }
+
+    if (!password || password.length < 6) {
+        showError('Password must be at least 6 characters.');
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        showError('Password and confirm password do not match.');
+        return;
+    }
+
+    clearError();
+
+    try {
+        showLoading();
+
+        const response = await fetch(apiUrl('auth/complete-signup'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ...payload,
+                otp: verifiedOtp,
+                username,
+                password,
+                confirmPassword
+            })
+        });
+
+        const data = await response.json().catch(() => ({}));
+        hideLoading();
+
+        if (!response.ok) {
+            const errorMessage = data.details ? `${data.error} (${data.details})` : (data.error || 'Unable to create account.');
+            showError(errorMessage);
+            showToast(errorMessage, 'error');
+            return;
+        }
+
+        const account = { ...(data.account || {}), role: 'visitor' };
         saveUserSession(
-            account.role || 'visitor',
+            'visitor',
             null,
             account.phone || null,
             account.name || payload.fullName,
             account.email || null,
-            account.contact || account.phone || account.email || ''
+            account.contact || account.phone || account.email || username
         );
         saveVisitorAccount(account);
 
@@ -173,7 +251,7 @@ async function verifyOtp() {
             window.location.href = 'index.html';
         }, 800);
     } catch (error) {
-        console.error('OTP verification error:', error);
+        console.error('Complete signup error:', error);
         hideLoading();
         showError(`Unable to connect to the backend. Check backend URL: ${API_ORIGIN}`);
         showToast('Backend connection failed.', 'error');
@@ -184,14 +262,18 @@ function continueWithSavedAccount() {
     const savedAccount = getSavedVisitorAccount();
     if (!savedAccount) return;
 
+    const visitorAccount = { ...savedAccount, role: 'visitor' };
+
     saveUserSession(
-        savedAccount.role || 'visitor',
+        'visitor',
         null,
-        savedAccount.phone || null,
-        savedAccount.name || 'Visitor',
-        savedAccount.email || null,
-        savedAccount.contact || savedAccount.phone || savedAccount.email || ''
+        visitorAccount.phone || null,
+        visitorAccount.name || 'Visitor',
+        visitorAccount.email || null,
+        visitorAccount.contact || visitorAccount.phone || visitorAccount.email || ''
     );
+
+    saveVisitorAccount(visitorAccount);
 
     window.location.href = 'index.html';
 }
@@ -228,6 +310,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('otpInput').addEventListener('keyup', (event) => {
         if (event.key === 'Enter') {
             verifyOtp();
+        }
+    });
+
+    document.getElementById('signupConfirmPassword')?.addEventListener('keyup', (event) => {
+        if (event.key === 'Enter') {
+            completeSignup();
         }
     });
 });

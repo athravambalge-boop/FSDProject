@@ -13,6 +13,28 @@
     font-family: "Segoe UI", "Trebuchet MS", sans-serif;
 }
 
+.cb-landing-intro {
+    position: fixed;
+    right: 20px;
+    bottom: 162px;
+    z-index: 10001;
+    max-width: min(420px, calc(100vw - 30px));
+    background: #0a6c74;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    box-shadow: 0 10px 26px rgba(8, 39, 44, 0.2);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.cb-landing-intro.hidden {
+    opacity: 0;
+    transform: translateY(4px);
+}
+
 .cb-chatbot * {
     box-sizing: border-box;
 }
@@ -222,5 +244,11 @@
         height: min(76vh, 520px);
         right: -2px;
         bottom: 72px;
+    }
+
+    .cb-landing-intro {
+        right: 12px;
+        bottom: 148px;
+        max-width: calc(100vw - 20px);
     }
 }

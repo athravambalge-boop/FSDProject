@@ -4,6 +4,8 @@
     }
 
     const CHATBOT_INTENTS_KEY = 'campus_bites_chatbot_intents';
+    const CHATBOT_NAME = 'Athya';
+    const CHATBOT_DESC = 'your Campus Bites assistant';
 
     const pageKey = (() => {
         const parts = window.location.pathname.split('/').filter(Boolean);
@@ -13,12 +15,12 @@
 
     const defaultConfig = {
         fallbackIntent: {
-            greet: 'Hi! I am Campus Bites bot. Ask me anything about ordering, payment, and account flow.',
+            greet: 'Ask me anything about ordering, payment, and account flow.',
             quick: ['How to order?', 'Track order', 'Contact support']
         },
         pageIntents: {
             'landing.html': {
-                greet: 'Welcome! I can help you quickly sign up, login, or understand what this portal offers.',
+                greet: 'I can help you quickly sign up, login, or understand what this portal offers.',
                 quick: ['Sign up help', 'Login help', 'What can I do here?']
             },
             'index.html': {
@@ -265,7 +267,32 @@
 
     function initialBotMessage() {
         const intent = pageIntent();
-        return intent.greet + '\nYou can ask short questions and I will guide you quickly.';
+        return `Hi, I am ${CHATBOT_NAME} - ${CHATBOT_DESC}. ${intent.greet}\nYou can ask short questions and I will guide you quickly.`;
+    }
+
+    function createLandingIntroBanner() {
+        if (pageKey !== 'landing.html') {
+            return;
+        }
+
+        const intro = document.createElement('div');
+        intro.className = 'cb-landing-intro';
+        intro.textContent = `${CHATBOT_NAME} here - ${CHATBOT_DESC}. Can I help you with anything today?`;
+        document.body.appendChild(intro);
+
+        const dismissIntro = () => {
+            if (intro.parentElement) {
+                intro.classList.add('hidden');
+                setTimeout(() => {
+                    if (intro.parentElement) {
+                        intro.remove();
+                    }
+                }, 180);
+            }
+        };
+
+        // Any click/tap anywhere on page dismisses this intro line.
+        document.addEventListener('pointerdown', dismissIntro, { once: true, capture: true });
     }
 
     function extractOrderIdFromText(text) {
@@ -327,10 +354,12 @@
         document.body.appendChild(host);
 
         const launcher = host.querySelector('.cb-launcher');
+        const panel = host.querySelector('.cb-panel');
         const sendBtn = host.querySelector('.cb-send');
         const input = host.querySelector('.cb-input');
         const thread = host.querySelector('.cb-thread');
         let pendingRedirectTarget = null;
+        let openedOnce = false;
 
         const addMsg = (text, role) => {
             const msg = document.createElement('div');
@@ -443,6 +472,12 @@
             const isOpen = host.classList.toggle('open');
             launcher.setAttribute('aria-label', isOpen ? 'Close chatbot' : 'Open chatbot');
             if (isOpen) {
+                if (!openedOnce) {
+                    addMsg(`Hi, I am ${CHATBOT_NAME}.`, 'bot');
+                    addMsg(initialBotMessage(), 'bot');
+                    addQuickActions();
+                    openedOnce = true;
+                }
                 input.focus();
             }
         });
@@ -457,8 +492,21 @@
             }
         });
 
-        addMsg(initialBotMessage(), 'bot');
-        addQuickActions();
+        document.addEventListener('pointerdown', (event) => {
+            if (!host.classList.contains('open')) {
+                return;
+            }
+
+            const target = event.target;
+            if (panel.contains(target) || launcher.contains(target)) {
+                return;
+            }
+
+            host.classList.remove('open');
+            launcher.setAttribute('aria-label', 'Open chatbot');
+        });
+
+        createLandingIntroBanner();
     }
 
     window.CampusBitesChatbot = {
