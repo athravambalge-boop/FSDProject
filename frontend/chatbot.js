@@ -4,7 +4,7 @@
     }
 
     const CHATBOT_INTENTS_KEY = 'campus_bites_chatbot_intents';
-    const CHATBOT_NAME = 'Athya';
+    const CHATBOT_NAME = 'Adiva';
     const CHATBOT_DESC = 'your Campus Bites assistant';
 
     const pageKey = (() => {
@@ -330,8 +330,74 @@
         ].join('\n');
     }
 
-    function makeRobotIcon() {
-        return '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="10" y="12" width="28" height="24" rx="8" fill="currentColor"></rect><circle cx="18" cy="24" r="3" fill="#0f3f46"></circle><circle cx="30" cy="24" r="3" fill="#0f3f46"></circle><rect x="19" y="30" width="10" height="2.5" rx="1.2" fill="#0f3f46"></rect><rect x="22" y="5" width="4" height="8" rx="2" fill="currentColor"></rect><circle cx="24" cy="4" r="3" fill="#f2c84b"></circle></svg>';
+    function makeMascotIcon() {
+        return [
+            '<svg class="cb-mascot" viewBox="0 0 92 116" aria-hidden="true">',
+            '  <defs>',
+            '    <linearGradient id="cbHeadGrad" x1="18" y1="14" x2="72" y2="62" gradientUnits="userSpaceOnUse">',
+            '      <stop offset="0" stop-color="#51adff"></stop>',
+            '      <stop offset="1" stop-color="#1d73d0"></stop>',
+            '    </linearGradient>',
+            '    <linearGradient id="cbBodyGrad" x1="36" y1="62" x2="56" y2="98" gradientUnits="userSpaceOnUse">',
+            '      <stop offset="0" stop-color="#ffffff"></stop>',
+            '      <stop offset="1" stop-color="#ecf7ff"></stop>',
+            '    </linearGradient>',
+            '    <linearGradient id="cbTieGrad" x1="40" y1="66" x2="51" y2="102" gradientUnits="userSpaceOnUse">',
+            '      <stop offset="0" stop-color="#ffaf56"></stop>',
+            '      <stop offset="1" stop-color="#e46f20"></stop>',
+            '    </linearGradient>',
+            '  </defs>',
+            '  <ellipse class="cb-mascot-shadow" cx="46" cy="109" rx="20" ry="5"></ellipse>',
+            '  <circle class="cb-mascot-ear" cx="16" cy="40" r="8"></circle>',
+            '  <circle class="cb-mascot-ear" cx="76" cy="40" r="8"></circle>',
+            '  <ellipse class="cb-mascot-head-highlight" cx="33" cy="22" rx="12" ry="8"></ellipse>',
+            '  <circle class="cb-mascot-head" cx="46" cy="38" r="27"></circle>',
+            '  <rect class="cb-mascot-face" x="24" y="24" width="44" height="28" rx="14"></rect>',
+            '  <rect class="cb-mascot-screen-glow" x="28" y="27" width="36" height="10" rx="5"></rect>',
+            '  <circle class="cb-mascot-cheek" cx="33" cy="44" r="2.1"></circle>',
+            '  <circle class="cb-mascot-cheek" cx="59" cy="44" r="2.1"></circle>',
+            '  <circle class="cb-mascot-eye" cx="38" cy="38" r="3"></circle>',
+            '  <circle class="cb-mascot-eye" cx="54" cy="38" r="3"></circle>',
+            '  <rect class="cb-mascot-smile" x="39" y="45" width="14" height="4" rx="2"></rect>',
+            '  <rect class="cb-mascot-body" x="34" y="62" width="24" height="35" rx="11"></rect>',
+            '  <text class="cb-mascot-uniform-text" x="46" y="86" text-anchor="middle">PCCOE</text>',
+            '  <ellipse class="cb-mascot-body-shadow" cx="46" cy="95" rx="8" ry="4"></ellipse>',
+            '  <path class="cb-mascot-tie" d="M46 66 L52 72 L46 78 L40 72 Z"></path>',
+            '  <path class="cb-mascot-tie" d="M46 79 L51 96 L46 102 L41 96 Z"></path>',
+            '  <circle class="cb-mascot-tie-pin" cx="46" cy="72" r="1.5"></circle>',
+            '  <circle class="cb-mascot-shoulder" cx="34" cy="69" r="4.5"></circle>',
+            '  <g class="cb-eat-arm">',
+            '    <rect class="cb-mascot-arm" x="23" y="66" width="14" height="7" rx="3.5"></rect>',
+            '    <g class="cb-eat-palm">',
+            '      <circle class="cb-mascot-hand" cx="20" cy="69" r="7.5"></circle>',
+            '      <g class="cb-mascot-food">',
+            '        <path class="cb-mascot-food-main" d="M22.2 63.4 L30.2 61.6 L25.5 66.8 Z"></path>',
+            '        <path class="cb-mascot-food-fold" d="M24.9 64.2 L27.6 63.5 L25.8 65.7 Z"></path>',
+            '      </g>',
+            '    </g>',
+            '  </g>',
+            '  <circle class="cb-mascot-shoulder" cx="58" cy="72" r="4"></circle>',
+            '  <rect class="cb-mascot-arm" x="57" y="70" width="13" height="6.5" rx="3.25"></rect>',
+            '  <circle class="cb-mascot-hand" cx="72" cy="73" r="6.5"></circle>',
+            '  <circle class="cb-mascot-spark" cx="68" cy="22" r="1.4"></circle>',
+            '  <circle class="cb-mascot-spark" cx="73" cy="27" r="0.9"></circle>',
+            '</svg>'
+        ].join('');
+    }
+
+    function startEatingLoop(launcher) {
+        const eatNow = () => {
+            launcher.classList.remove('cb-eating');
+            // Force reflow so repeated class toggles retrigger animation.
+            void launcher.offsetWidth;
+            launcher.classList.add('cb-eating');
+            setTimeout(() => {
+                launcher.classList.remove('cb-eating');
+            }, 1700);
+        };
+
+        setTimeout(eatNow, 600);
+        setInterval(eatNow, 5000);
     }
 
     async function createChatbot() {
@@ -341,7 +407,7 @@
         host.className = 'cb-chatbot';
 
         host.innerHTML = [
-            '<button class="cb-launcher" type="button" aria-label="Open chatbot">' + makeRobotIcon() + '</button>',
+            '<button class="cb-launcher" type="button" aria-label="Open chatbot">' + makeMascotIcon() + '</button>',
             '<section class="cb-panel" role="dialog" aria-label="Campus Bites chatbot">',
             '  <div class="cb-thread" id="cbThread"></div>',
             '  <div class="cb-input-wrap">',
@@ -354,6 +420,7 @@
         document.body.appendChild(host);
 
         const launcher = host.querySelector('.cb-launcher');
+        startEatingLoop(launcher);
         const panel = host.querySelector('.cb-panel');
         const sendBtn = host.querySelector('.cb-send');
         const input = host.querySelector('.cb-input');

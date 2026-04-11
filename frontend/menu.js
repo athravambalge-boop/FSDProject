@@ -20,6 +20,56 @@ function escapeHtml(value) {
 }
 
 function getFoodImage(item) {
+  const itemName = String(item?.item_name || "").trim().toLowerCase();
+
+  if (itemName.includes("poha")) {
+    return "poha.jpg";
+  }
+
+  if (itemName.includes("samosa")) {
+    return "samosa.avif";
+  }
+
+  if (itemName.includes("dosa")) {
+    return "dosa.jpg";
+  }
+
+  if (itemName.includes("upma")) {
+    return "upma.jpg";
+  }
+
+  if (itemName.includes("maggi")) {
+    return "maggi.webp";
+  }
+
+  if (itemName.includes("medu vada") || itemName.includes("medu wada")) {
+    return "medu vada.jpg";
+  }
+
+  if (itemName.includes("vada pav") || itemName.includes("wada pav")) {
+    return "vada pav.png";
+  }
+
+  if (itemName.includes("uthappa") || itemName.includes("uttappa")) {
+    return "uthappa.avif";
+  }
+
+  if (
+    itemName.includes("white sauce pasta") ||
+    itemName.includes("whitesauce pasta") ||
+    itemName.includes("white pasta")
+  ) {
+    return "whitesaucepasta.jpg";
+  }
+
+  if (itemName.includes("paneer puff")) {
+    return "PaneerPuff.jpg";
+  }
+
+  if (itemName.includes("cold coffee")) {
+    return "cold coffee.png";
+  }
+
   const seed = `${item.category || "food"}-${item.item_name || "item"}`;
   return `https://picsum.photos/seed/${encodeURIComponent(seed)}/640/360`;
 }

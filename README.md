@@ -15,7 +15,8 @@ This project was built as an end-to-end academic product to practice real-world 
 - One deployed service that serves both static frontend and API
 - Manual payment flow with screenshot verification pipeline
 - Search/filter UX on menu and mess browsing
-- Chatbot intent file for basic support interactions
+- Context-aware support chatbot across pages
+- Animated mascot launcher with food-themed interaction loop
 
 ## Tech Stack
 
@@ -29,6 +30,9 @@ This project was built as an end-to-end academic product to practice real-world 
 ## Repository Structure
 
 - frontend/: browser UI pages, styles, JS, and menu image assets
+- frontend/chatbot.js: chatbot UI logic, intents mapping, and mascot behavior
+- frontend/chatbot.css: chatbot and mascot styling/animations
+- frontend/chatbot-intents.json: intent/rule customization for responses
 - backend/: Express server, route modules, DB configuration
 - backend/COMPLETE_DATABASE.sql: base schema and seed script
 - render.yaml: Render blueprint config
@@ -43,7 +47,9 @@ This project was built as an end-to-end academic product to practice real-world 
 - Cart and order placement
 - QR payment details + receipt upload
 - Payment status tracking and history pages
-- Basic chatbot support on frontend
+- Frontend chatbot support on all pages (unless explicitly disabled)
+- Page-specific quick actions and fallback intent handling
+- Animated mascot launcher with periodic eating gesture
 
 ## Screenshots
 
@@ -162,6 +168,8 @@ Recommended setup is one Render web service serving both frontend and API.
 - Introduce centralized validation for request payloads
 - Add pagination and caching for scalable menu/order APIs
 - Improve admin metrics dashboard with charts
+- Add chatbot analytics (top intents, fallback rate, unresolved queries)
+- Add multilingual support for chatbot prompts
 
 ## Project Hygiene
 

@@ -13,7 +13,10 @@ const MANUAL_PAYMENT_ACCOUNT_NAME = process.env.MANUAL_PAYMENT_ACCOUNT_NAME || "
 const MANUAL_PAYMENT_ACCOUNT_NO = process.env.MANUAL_PAYMENT_ACCOUNT_NO || "000000000000";
 const MANUAL_PAYMENT_IFSC = process.env.MANUAL_PAYMENT_IFSC || "BANK0000000";
 const MANUAL_PAYMENT_QR_IMAGE_URL = process.env.MANUAL_PAYMENT_QR_IMAGE_URL || "QR.jpeg";
-const PROOF_UPLOAD_DIR = path.join(__dirname, "..", "uploads", "payment-proofs");
+const uploadsDir = process.env.UPLOADS_DIR
+  ? path.resolve(process.env.UPLOADS_DIR)
+  : path.join(__dirname, "..", "uploads");
+const PROOF_UPLOAD_DIR = path.join(uploadsDir, "payment-proofs");
 
 function getBackendBaseUrl(req) {
   const forwardedProto = String(req.get("x-forwarded-proto") || "").split(",")[0].trim();

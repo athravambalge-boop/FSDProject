@@ -5,9 +5,15 @@ services:
     buildCommand: cd backend && npm install
     startCommand: cd backend && npm start
     autoDeploy: true
+    disk:
+      name: uploads-disk
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: 18
+      - key: UPLOADS_DIR
+        value: /var/data/uploads
       - key: DB_HOST
         sync: false
       - key: DB_USER
@@ -18,5 +24,7 @@ services:
         sync: false
       - key: DB_PORT
         value: 3306
+      - key: BACKEND_BASE_URL
+        sync: false
       - key: ALLOWED_ORIGINS
         sync: false

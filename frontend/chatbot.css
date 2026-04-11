@@ -15,11 +15,11 @@
 
 .cb-landing-intro {
     position: fixed;
-    right: 20px;
-    bottom: 162px;
+    right: 116px;
+    bottom: 136px;
     z-index: 10001;
-    max-width: min(420px, calc(100vw - 30px));
-    background: #0a6c74;
+    max-width: min(420px, calc(100vw - 130px));
+    background: #0f9eab;
     color: #ffffff;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 14px;
@@ -40,40 +40,267 @@
 }
 
 .cb-launcher {
-    width: 62px;
-    height: 62px;
+    width: 86px;
+    height: 108px;
     border: none;
-    border-radius: 50%;
+    border-radius: 16px;
     padding: 0;
     line-height: 0;
     appearance: none;
     -webkit-appearance: none;
-    background: radial-gradient(circle at 30% 25%, #1ea5b2 0%, var(--cb-primary) 60%, var(--cb-primary-strong) 100%);
+    background: transparent;
     color: #fff;
     cursor: pointer;
-    box-shadow: var(--cb-shadow);
+    box-shadow: none;
     display: grid;
     place-items: center;
     position: relative;
     z-index: 2;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease;
 }
 
 .cb-launcher:hover {
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 0 18px 34px rgba(8, 39, 44, 0.35);
+    transform: translateY(-2px) scale(1.02);
 }
 
 .cb-launcher svg {
-    width: 34px;
-    height: 34px;
+    width: 86px;
+    height: 108px;
     display: block;
     margin: 0;
 }
 
+.cb-launcher .cb-mascot {
+    overflow: visible;
+}
+
+.cb-launcher .cb-mascot-shadow {
+    fill: rgba(11, 40, 61, 0.18);
+}
+
+.cb-launcher .cb-mascot-head {
+    fill: url(#cbHeadGrad);
+    stroke: #0c63bf;
+    stroke-width: 2;
+}
+
+.cb-launcher .cb-mascot-head-highlight {
+    fill: rgba(255, 255, 255, 0.3);
+}
+
+.cb-launcher .cb-mascot-face {
+    fill: #f8fdff;
+    stroke: #c7e4fb;
+    stroke-width: 1.5;
+}
+
+.cb-launcher .cb-mascot-screen-glow {
+    fill: rgba(157, 220, 255, 0.45);
+}
+
+.cb-launcher .cb-mascot-cheek {
+    fill: rgba(255, 175, 120, 0.6);
+}
+
+.cb-launcher .cb-mascot-eye {
+    fill: #1876d2;
+}
+
+.cb-launcher .cb-mascot-smile {
+    fill: #1c7fd9;
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
+.cb-launcher .cb-mascot-body {
+    fill: url(#cbBodyGrad);
+    stroke: #cfe7fb;
+    stroke-width: 2;
+}
+
+.cb-launcher .cb-mascot-body-shadow {
+    fill: rgba(29, 114, 175, 0.12);
+}
+
+.cb-launcher .cb-mascot-uniform-text {
+    fill: #0b4d7a;
+    font-size: 5.4px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    paint-order: stroke;
+    stroke: rgba(255, 255, 255, 0.85);
+    stroke-width: 0.45px;
+    font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+}
+
+.cb-launcher .cb-mascot-tie {
+    fill: url(#cbTieGrad);
+}
+
+.cb-launcher .cb-mascot-tie-pin {
+    fill: #ffd792;
+}
+
+.cb-launcher .cb-mascot-hand,
+.cb-launcher .cb-mascot-ear {
+    fill: #3392ea;
+    stroke: #0f66c1;
+    stroke-width: 2;
+}
+
+.cb-launcher .cb-mascot-arm,
+.cb-launcher .cb-mascot-shoulder {
+    fill: #2d88df;
+    stroke: #0f66c1;
+    stroke-width: 2;
+}
+
+.cb-launcher .cb-mascot-spark {
+    fill: rgba(255, 255, 255, 0.85);
+}
+
+.cb-launcher .cb-mascot-food {
+    transform-box: view-box;
+    transform-origin: 26px 64px;
+}
+
+.cb-launcher .cb-mascot-food-main {
+    fill: #f4be4a;
+    stroke: #d09312;
+    stroke-width: 1;
+}
+
+.cb-launcher .cb-mascot-food-fold {
+    fill: #f8d57a;
+    stroke: #d59f30;
+    stroke-width: 0.7;
+}
+
+.cb-launcher .cb-eat-arm {
+    transform-box: view-box;
+    transform-origin: 34px 69px;
+}
+
+.cb-launcher .cb-eat-palm {
+    transform-box: view-box;
+    transform-origin: 20px 69px;
+}
+
+.cb-launcher.cb-eating .cb-eat-arm {
+    animation: cbEatArm 1.7s ease-in-out 1;
+}
+
+.cb-launcher.cb-eating .cb-eat-palm {
+    animation: cbPalmToMouth 1.7s ease-in-out 1;
+}
+
+.cb-launcher.cb-eating .cb-mascot-food {
+    animation: cbFoodBite 1.7s ease-in-out 1;
+}
+
+.cb-launcher.cb-eating .cb-mascot-smile {
+    animation: cbChew 0.22s ease-in-out 4 0.72s;
+}
+
+@keyframes cbEatArm {
+    0%,
+    14% {
+        transform: rotate(0deg);
+    }
+
+    34% {
+        transform: rotate(-10deg);
+    }
+
+    50%,
+    62% {
+        transform: rotate(-16deg);
+    }
+
+    78% {
+        transform: rotate(-7deg);
+    }
+
+    100% {
+        transform: rotate(0deg);
+    }
+}
+
+@keyframes cbPalmToMouth {
+    0%,
+    18% {
+        transform: translate(0, 0);
+    }
+
+    40% {
+        transform: translate(10px, -11px);
+    }
+
+    52%,
+    64% {
+        transform: translate(18px, -18px);
+    }
+
+    80% {
+        transform: translate(8px, -8px);
+    }
+
+    100% {
+        transform: translate(0, 0);
+    }
+}
+
+@keyframes cbFoodBite {
+    0%,
+    36% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+
+    48% {
+        transform: translate(3px, 1px) scale(0.9);
+        opacity: 0.55;
+    }
+
+    52% {
+        transform: translate(5px, 2px) scale(0.5);
+        opacity: 0;
+    }
+
+    56%,
+    72% {
+        transform: translate(6px, 3px) scale(0.14);
+        opacity: 0;
+    }
+
+    78% {
+        transform: translate(2px, 1px) scale(0.62);
+        opacity: 0.3;
+    }
+
+    100% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes cbChew {
+    0% {
+        transform: scaleX(1);
+    }
+
+    50% {
+        transform: scaleX(0.74);
+    }
+
+    100% {
+        transform: scaleX(1);
+    }
+}
+
 .cb-panel {
     width: min(380px, calc(100vw - 24px));
-    height: min(540px, calc(100vh - 132px));
+    height: min(540px, calc(100vh - 214px));
     background: var(--cb-surface);
     border-radius: 18px;
     box-shadow: var(--cb-shadow);
@@ -83,7 +310,7 @@
     transform-origin: bottom right;
     position: absolute;
     right: 0;
-    bottom: 74px;
+    bottom: 104px;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -239,16 +466,26 @@
         bottom: 84px;
     }
 
+    .cb-launcher {
+        width: 78px;
+        height: 100px;
+    }
+
+    .cb-launcher svg {
+        width: 78px;
+        height: 100px;
+    }
+
     .cb-panel {
         width: calc(100vw - 12px);
-        height: min(76vh, 520px);
+        height: min(520px, calc(100vh - 196px));
         right: -2px;
-        bottom: 72px;
+        bottom: 94px;
     }
 
     .cb-landing-intro {
-        right: 12px;
+        right: 90px;
         bottom: 148px;
-        max-width: calc(100vw - 20px);
+        max-width: calc(100vw - 102px);
     }
 }
