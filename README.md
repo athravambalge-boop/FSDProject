@@ -171,4 +171,4 @@ Recommended setup is one Render web service serving both frontend and API.
 
 ## Author
 
-Atharv
+Atharva Prashant Ambalge 
