@@ -9,6 +9,9 @@ const db = require("./config/db");
 const app = express();
 const PORT = process.env.PORT || 5000;
 const frontendDir = path.join(__dirname, "..", "frontend");
+const uploadsDir = process.env.UPLOADS_DIR
+   ? path.resolve(process.env.UPLOADS_DIR)
+   : path.join(__dirname, "uploads");
 
 app.set("trust proxy", 1);
 
@@ -73,7 +76,7 @@ app.use(
 );
 
 app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", express.static(uploadsDir));
 app.use(express.static(frontendDir));
 
 /* -------------------------
@@ -355,15 +358,34 @@ async function ensureBaseSchema() {
       .filter(Boolean)
       .filter((statement) => {
          const upper = statement.toUpperCase();
-         return !upper.startsWith("CREATE DATABASE") && !upper.startsWith("USE ") && !upper.startsWith("DESCRIBE ");
+         return (
+            !upper.startsWith("DROP DATABASE") &&
+            !upper.startsWith("CREATE DATABASE") &&
+            !upper.startsWith("USE ") &&
+            !upper.startsWith("DESCRIBE ")
+         );
       });
 
    for (const statement of statements) {
+      const upper = statement.toUpperCase();
+
+      // For partially initialized databases, avoid replaying non-idempotent DDL.
+      if (!isFreshDatabase && !upper.startsWith("CREATE TABLE IF NOT EXISTS")) {
+         continue;
+      }
+
       if (!isFreshDatabase && statement.toUpperCase().startsWith("INSERT INTO ")) {
          continue;
       }
 
-      await db.query(statement);
+      try {
+         await db.query(statement);
+      } catch (err) {
+         const message = err?.sqlMessage || err?.message || "Unknown schema query error";
+         console.error("Base schema statement failed:", statement.slice(0, 180));
+         console.error(message);
+         throw err;
+      }
    }
 }
 
@@ -387,7 +409,7 @@ Promise.all([
    runSchemaStep("auth schema", ensureAuthSchema)
 ])
    .then(() => {
-      const proofDir = path.join(__dirname, "uploads", "payment-proofs");
+      const proofDir = path.join(uploadsDir, "payment-proofs");
       if (!fs.existsSync(proofDir)) {
          fs.mkdirSync(proofDir, { recursive: true });
       }
