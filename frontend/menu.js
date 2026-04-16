@@ -1,9 +1,47 @@
 const params = new URLSearchParams(window.location.search);
 const messId = params.get("id");
+const targetItemQuery = (params.get("item") || "").trim().toLowerCase();
+const targetMessLabel = params.get("mess") || "";
 const cart = {};
 let messName = "";
 let allMenuItems = [];
 let lastOrderPhone = "";
+let pendingOrderData = null;
+
+function getCustomerDetailsFromSession() {
+  const session = getUserSession();
+  const savedAccount = getSavedVisitorAccount?.();
+
+  return {
+    name: session.customer_name || savedAccount?.name || "",
+    phone: session.customer_phone || savedAccount?.phone || savedAccount?.contact || "",
+    email: session.customer_email || savedAccount?.email || ""
+  };
+}
+
+function prefillCustomerDetails() {
+  const accountDetails = getCustomerDetailsFromSession();
+
+  const customerNameInput = document.getElementById("customerName");
+  const customerPhoneInput = document.getElementById("customerPhone");
+  const customerEmailInput = document.getElementById("customerEmail");
+
+  const customerName = accountDetails.name;
+  const customerPhone = accountDetails.phone;
+  const customerEmail = accountDetails.email;
+
+  if (customerNameInput && customerName) {
+    customerNameInput.value = customerName;
+  }
+
+  if (customerPhoneInput && customerPhone) {
+    customerPhoneInput.value = customerPhone;
+  }
+
+  if (customerEmailInput && customerEmail) {
+    customerEmailInput.value = customerEmail;
+  }
+}
 
 function getSelectedPaymentMethod() {
   const selected = document.querySelector('input[name="paymentMethod"]:checked');
@@ -90,8 +128,9 @@ function renderMenuItems(itemsToRender) {
       ${itemsToRender.map(item => {
         const safeName = item.item_name.replace(/'/g, "\\'");
         const imageUrl = getFoodImage(item);
+        const isTargetItem = targetItemQuery && String(item.item_name || "").toLowerCase().includes(targetItemQuery);
         return `
-          <article class="order-card">
+          <article class="order-card${isTargetItem ? ' target-menu-item' : ''}" id="menu-item-${item.item_id}">
             <img class="order-card-image" src="${imageUrl}" alt="${escapeHtml(item.item_name)}" loading="lazy"
               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22640%22 height=%22360%22%3E%3Crect fill=%22%232b2f3c%22 width=%22640%22 height=%22360%22/%3E%3Ctext fill=%22white%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-size=%2230%22%3EMenu Item%3C/text%3E%3C/svg%3E'">
             <div class="order-card-body">
@@ -148,7 +187,7 @@ async function loadMenu() {
 
     const mess = await messRes.json();
     messName = mess.name;
-    document.getElementById("messTitle").innerText = `Choose Order · ${mess.name}`;
+    document.getElementById("messTitle").innerText = targetMessLabel ? `Choose Order · ${mess.name} · ${targetMessLabel}` : `Choose Order · ${mess.name}`;
 
     const res = await fetch(apiUrl(`menu/${messId}`));
     if (!res.ok) throw new Error("Failed to load menu");
@@ -167,6 +206,20 @@ async function loadMenu() {
 
     allMenuItems = items;
     renderMenuItems(allMenuItems);
+
+    if (targetItemQuery) {
+      const searchInput = document.getElementById("menuSearchInput");
+      if (searchInput) {
+        searchInput.value = targetItemQuery;
+      }
+
+      filterMenu();
+
+      const targetCard = document.querySelector('.target-menu-item');
+      if (targetCard) {
+        targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
 
     hideLoading();
     showToast(`Welcome to ${messName}`, "info");
@@ -218,6 +271,106 @@ function updateCart() {
   cartTotal.innerText = `Total: ${formatCurrency(total)}`;
 }
 
+function hideOrderSummary() {
+  const orderSummarySection = document.getElementById("orderSummarySection");
+  if (orderSummarySection) {
+    orderSummarySection.style.display = "none";
+    orderSummarySection.innerHTML = "";
+  }
+}
+
+function renderOrderSummary(summary) {
+  const orderSummarySection = document.getElementById("orderSummarySection");
+  if (!orderSummarySection) {
+    return;
+  }
+
+  const summaryItems = summary.items || summary.cartItems || [];
+  const accountDetails = getCustomerDetailsFromSession();
+  const customerName = summary.customerName || summary.customer_name || accountDetails.name;
+  const customerPhone = summary.customerPhone || summary.customer_phone || accountDetails.phone;
+
+  orderSummarySection.innerHTML = `
+    <div class="dashboard order-summary-card">
+      <h2>Order Summary</h2>
+      <div class="order-summary-details">
+        <div><span>Mess</span><strong>${escapeHtml(summary.messName)}</strong></div>
+        <div><span>Customer</span><strong>${escapeHtml(customerName)}</strong></div>
+        <div><span>Phone</span><strong>${escapeHtml(customerPhone)}</strong></div>
+        <div><span>Payment</span><strong>${escapeHtml(summary.paymentLabel)}</strong></div>
+      </div>
+      <div class="order-summary-items">
+        ${summaryItems.map(item => `
+          <div class="order-summary-item">
+            <span>${escapeHtml(item.name)} x${item.quantity}</span>
+            <strong>${formatCurrency(item.price * item.quantity)}</strong>
+          </div>
+        `).join("")}
+      </div>
+      <div class="order-summary-total">
+        <span>Total Amount</span>
+        <strong>${formatCurrency(summary.total)}</strong>
+      </div>
+      <p class="order-summary-note">After confirming, you will scan the QR and upload the payment screenshot.</p>
+      <div class="order-summary-actions">
+        <button type="button" class="secondary-btn" onclick="cancelOrderSummary()">Cancel</button>
+        <button type="button" onclick="confirmOrderSummary()">Confirm Order</button>
+      </div>
+    </div>`;
+  orderSummarySection.style.display = "block";
+  orderSummarySection.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function cancelOrderSummary() {
+  pendingOrderData = null;
+  hideOrderSummary();
+}
+
+async function confirmOrderSummary() {
+  if (!pendingOrderData) {
+    return;
+  }
+
+  const { customer_name, customer_phone, customer_email, items, total, paymentLabel } = pendingOrderData;
+
+  try {
+    showLoading();
+
+    const res = await fetch(apiUrl("orders/place"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mess_id: parseInt(messId, 10),
+        customer_name,
+        customer_phone,
+        customer_email,
+        items,
+        payment_method: "online"
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      hideLoading();
+      return showToast(data.error || "Failed to place order", "error");
+    }
+
+    const orderId = data.order_id;
+    lastOrderPhone = customer_phone;
+    saveUserSession("visitor", null, customer_phone, customer_name);
+
+    hideOrderSummary();
+    pendingOrderData = null;
+    showToast("Order created. Continue with QR payment.", "success");
+    window.location.href = `payment-status.html?order_id=${encodeURIComponent(orderId)}&phone=${encodeURIComponent(customer_phone)}&amount=${encodeURIComponent(total.toFixed(2))}`;
+  } catch (err) {
+    console.error("Order placement error:", err);
+    hideLoading();
+    showToast(err.message || "Failed to place order. Please try again.", "error");
+  }
+}
+
 async function placeOrder() {
   const customer_name = document.getElementById("customerName").value.trim();
   const customer_phone = document.getElementById("customerPhone").value.trim();
@@ -238,57 +391,17 @@ async function placeOrder() {
   const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const paymentLabel = "QR Payment + Receipt Upload";
 
-  const confirmed = confirm(`Order Summary:\n\nMess: ${messName}\nTotal Amount: Rs.${total}\nPayment: ${paymentLabel}\n\nAfter this, you will scan the QR and upload the payment screenshot.\n\nConfirm order?`);
-  if (!confirmed) return;
+  pendingOrderData = {
+    customer_name,
+    customer_phone,
+    customer_email,
+    items: cartItems,
+    total,
+    paymentLabel,
+    messName
+  };
 
-  try {
-    showLoading();
-
-    const res = await fetch(apiUrl("orders/place"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        mess_id: parseInt(messId, 10),
-        customer_name,
-        customer_phone,
-        customer_email,
-        items: cartItems,
-        payment_method: "online"
-      })
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      hideLoading();
-      return showToast(data.error || "Failed to place order", "error");
-    }
-
-    const orderId = data.order_id;
-    lastOrderPhone = customer_phone;
-    saveUserSession("visitor", null, customer_phone, customer_name);
-
-    showToast("Order created. Continue with QR payment.", "success");
-    window.location.href = `payment-status.html?order_id=${encodeURIComponent(orderId)}&phone=${encodeURIComponent(customer_phone)}&amount=${encodeURIComponent(total.toFixed(2))}`;
-    return;
-
-    Object.keys(cart).forEach(key => {
-      cart[key].quantity = 0;
-      const qtyEl = document.getElementById(`qty_${key}`);
-      if (qtyEl) qtyEl.innerText = "0";
-    });
-
-    updateCart();
-    document.getElementById("customerName").value = "";
-    document.getElementById("customerPhone").value = "";
-    if (document.getElementById("customerEmail")) {
-      document.getElementById("customerEmail").value = "";
-    }
-  } catch (err) {
-    console.error("Order placement error:", err);
-    hideLoading();
-    showToast(err.message || "Failed to place order. Please try again.", "error");
-  }
+  renderOrderSummary(pendingOrderData);
 }
 
 function closeSuccessModal() {
@@ -301,6 +414,7 @@ function closeSuccessModal() {
 
 document.addEventListener("DOMContentLoaded", () => {
   loadMenu();
+  prefillCustomerDetails();
 
   const menuSearchInput = document.getElementById("menuSearchInput");
   if (menuSearchInput) {

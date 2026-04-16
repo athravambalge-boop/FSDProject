@@ -2,6 +2,61 @@
    TOAST NOTIFICATIONS
 ======================== */
 
+const THEME_STORAGE_KEY = 'theme-preference';
+
+function getStoredThemePreference() {
+    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    return storedTheme === 'dark' || storedTheme === 'light' ? storedTheme : '';
+}
+
+function getSystemThemePreference() {
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function syncThemeToggle(theme) {
+    const themeToggle = document.getElementById('themeToggle');
+    if (!themeToggle) {
+        return;
+    }
+
+    const isDark = theme === 'dark';
+    themeToggle.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+    themeToggle.setAttribute('aria-pressed', String(isDark));
+    themeToggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+}
+
+function applyThemePreference(theme, options = {}) {
+    const nextTheme = theme === 'dark' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    document.documentElement.style.colorScheme = nextTheme;
+
+    if (document.body) {
+        document.body.setAttribute('data-theme', nextTheme);
+    }
+
+    if (options.persist) {
+        localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+    }
+
+    syncThemeToggle(nextTheme);
+    return nextTheme;
+}
+
+function initializeThemePreference() {
+    applyThemePreference(getStoredThemePreference() || getSystemThemePreference());
+}
+
+window.applyThemePreference = applyThemePreference;
+window.initializeThemePreference = initializeThemePreference;
+
+document.addEventListener('DOMContentLoaded', initializeThemePreference);
+
+window.addEventListener('storage', (event) => {
+    if (event.key === THEME_STORAGE_KEY) {
+        applyThemePreference(event.newValue || getSystemThemePreference());
+    }
+});
+
 function showToast(message, type = 'info', duration = 3000) {
     const container = document.getElementById('toastContainer') || createToastContainer();
     const toast = document.createElement('div');

@@ -63,6 +63,31 @@ async function login() {
 
         showToast(`Welcome ${data.username || username}!`, 'success');
 
+        const pendingMenuTargetRaw = sessionStorage.getItem('pendingMenuTarget');
+        const pendingMenuTarget = pendingMenuTargetRaw ? JSON.parse(pendingMenuTargetRaw) : null;
+        if (pendingMenuTargetRaw) {
+            sessionStorage.removeItem('pendingMenuTarget');
+        }
+
+        async function resolveMessByQuery(query) {
+            const cleanQuery = String(query || '').trim().toLowerCase();
+            if (!cleanQuery) {
+                return null;
+            }
+
+            const response = await fetch(apiUrl(`mess?search=${encodeURIComponent(cleanQuery)}`));
+            if (!response.ok) {
+                return null;
+            }
+
+            const messes = await response.json();
+            return messes.find((mess) => {
+                const name = String(mess.name || '').toLowerCase();
+                const location = String(mess.location || '').toLowerCase();
+                return name.includes(cleanQuery) || location.includes(cleanQuery);
+            }) || messes[0] || null;
+        }
+
         // Redirect based on role
         setTimeout(() => {
             switch (data.role) {
@@ -70,6 +95,24 @@ async function login() {
                     window.location.href = "owner.html";
                     break;
                 case "visitor":
+                    if (pendingMenuTarget) {
+                        resolveMessByQuery(pendingMenuTarget.messQuery).then((mess) => {
+                            if (!mess) {
+                                window.location.href = "index.html";
+                                return;
+                            }
+
+                            const query = new URLSearchParams({
+                                id: String(mess.mess_id),
+                                item: pendingMenuTarget.item || '',
+                                mess: mess.name
+                            });
+
+                            window.location.href = `mess.html?${query.toString()}`;
+                        });
+                        return;
+                    }
+
                     window.location.href = "index.html";
                     break;
                 case "admin":

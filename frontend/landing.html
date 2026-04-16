@@ -13,6 +13,7 @@
     <header class="site-header">
         <a href="landing.html" class="brand">Pccoe Campus Bites</a>
         <nav class="top-nav">
+            <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch theme" aria-pressed="false">Dark Mode</button>
             <a href="create-account.html">Sign Up</a>
             <a href="login.html">Login</a>
         </nav>
@@ -106,6 +107,118 @@
             </div>
         </section>
 
+        <section class="food-gallery" aria-labelledby="gallery-title">
+            <div class="gallery-header">
+                <div>
+                    <p class="eyebrow">Menu preview</p>
+                    <h2 id="gallery-title">Browse food categories with a responsive image grid.</h2>
+                    <p class="gallery-subtitle">This grid uses category filters so users can quickly see snacks, meals, and drinks in a clean layout that adapts to screen size.</p>
+                </div>
+                <div class="gallery-meta" id="galleryCount" aria-live="polite">Showing all items</div>
+            </div>
+
+            <div class="gallery-filters" role="tablist" aria-label="Filter food items by category">
+                <button class="gallery-filter active" type="button" data-filter="all" aria-pressed="true">All</button>
+                <button class="gallery-filter" type="button" data-filter="breakfast" aria-pressed="false">Breakfast</button>
+                <button class="gallery-filter" type="button" data-filter="snacks" aria-pressed="false">Snacks</button>
+                <button class="gallery-filter" type="button" data-filter="meals" aria-pressed="false">Meals</button>
+                <button class="gallery-filter" type="button" data-filter="beverages" aria-pressed="false">Beverages</button>
+            </div>
+
+            <div class="gallery-grid" id="galleryGrid">
+                <article class="gallery-card reveal" data-category="breakfast" data-title="Poha" data-mess-query="Architecture" data-target-item="poha">
+                    <img src="poha.jpg" alt="Poha breakfast plate" loading="lazy">
+                    <div class="gallery-card-body">
+                        <span class="gallery-tag">Breakfast</span>
+                        <span class="gallery-mess-tag">Architecture Mess</span>
+                        <h3>Poha</h3>
+                        <p>A light and quick breakfast option for busy college mornings.</p>
+                    </div>
+                </article>
+                <article class="gallery-card reveal" data-category="breakfast" data-title="Upma" data-mess-query="Girls Hostel" data-target-item="upma">
+                    <img src="upma.jpg" alt="Upma breakfast bowl" loading="lazy">
+                    <div class="gallery-card-body">
+                        <span class="gallery-tag">Breakfast</span>
+                        <span class="gallery-mess-tag">Girls Hostel Mess</span>
+                        <h3>Upma</h3>
+                        <p>Soft and filling, ideal for students who want a simple morning meal.</p>
+                    </div>
+                </article>
+                <article class="gallery-card reveal" data-category="meals" data-title="Dosa" data-mess-query="Architecture" data-target-item="dosa">
+                    <img src="dosa.jpg" alt="Crispy dosa served with chutney" loading="lazy">
+                    <div class="gallery-card-body">
+                        <span class="gallery-tag">Meals</span>
+                        <span class="gallery-mess-tag">Architecture Mess</span>
+                        <h3>Dosa</h3>
+                        <p>A popular South Indian meal served hot and fresh from the mess.</p>
+                    </div>
+                </article>
+                <article class="gallery-card reveal" data-category="meals" data-title="Uthappa" data-mess-query="Girls Hostel" data-target-item="uthappa">
+                    <img src="uthappa.avif" alt="Uthappa with toppings" loading="lazy">
+                    <div class="gallery-card-body">
+                        <span class="gallery-tag">Meals</span>
+                        <span class="gallery-mess-tag">Girls Hostel Mess</span>
+                        <h3>Uthappa</h3>
+                        <p>A savory and wholesome option with a balanced, satisfying taste.</p>
+                    </div>
+                </article>
+                <article class="gallery-card reveal" data-category="snacks" data-title="Samosa" data-mess-query="Girls Hostel" data-target-item="samosa">
+                    <img src="samosa.avif" alt="Crispy samosa snack" loading="lazy">
+                    <div class="gallery-card-body">
+                        <span class="gallery-tag">Snacks</span>
+                        <span class="gallery-mess-tag">Girls Hostel Mess</span>
+                        <h3>Samosa</h3>
+                        <p>A classic snack that works well with tea during lecture breaks.</p>
+                    </div>
+                </article>
+                <article class="gallery-card reveal" data-category="snacks" data-title="Vada Pav" data-mess-query="Architecture" data-target-item="vada pav">
+                    <img src="vada pav.png" alt="Vada pav snack" loading="lazy">
+                    <div class="gallery-card-body">
+                        <span class="gallery-tag">Snacks</span>
+                        <span class="gallery-mess-tag">Architecture Mess</span>
+                        <h3>Vada Pav</h3>
+                        <p>Fast, filling, and one of the most common campus snack favorites.</p>
+                    </div>
+                </article>
+                <article class="gallery-card reveal" data-category="snacks" data-title="Paneer Puff" data-mess-query="Architecture" data-target-item="paneer puff">
+                    <img src="PaneerPuff.jpg" alt="Paneer puff snack" loading="lazy">
+                    <div class="gallery-card-body">
+                        <span class="gallery-tag">Snacks</span>
+                        <span class="gallery-mess-tag">Architecture Mess</span>
+                        <h3>Paneer Puff</h3>
+                        <p>A bakery-style snack with a crisp crust and soft filling.</p>
+                    </div>
+                </article>
+                <article class="gallery-card reveal" data-category="snacks" data-title="Maggi" data-mess-query="Girls Hostel" data-target-item="maggi">
+                    <img src="maggi.webp" alt="Maggi noodles bowl" loading="lazy">
+                    <div class="gallery-card-body">
+                        <span class="gallery-tag">Snacks</span>
+                        <span class="gallery-mess-tag">Girls Hostel Mess</span>
+                        <h3>Maggi</h3>
+                        <p>A quick comfort snack for late study sessions and short breaks.</p>
+                    </div>
+                </article>
+                <article class="gallery-card reveal" data-category="meals" data-title="White Sauce Pasta" data-mess-query="Girls Hostel" data-target-item="white sauce pasta">
+                    <img src="whitesaucepasta.jpg" alt="White sauce pasta dish" loading="lazy">
+                    <div class="gallery-card-body">
+                        <span class="gallery-tag">Meals</span>
+                        <span class="gallery-mess-tag">Girls Hostel Mess</span>
+                        <h3>White Sauce Pasta</h3>
+                        <p>A richer menu item for students looking for something different.</p>
+                    </div>
+                </article>
+                <article class="gallery-card reveal" data-category="beverages" data-title="Cold Coffee" data-mess-query="Architecture" data-target-item="cold coffee">
+                    <img src="cold coffee.png" alt="Cold coffee drink" loading="lazy">
+                    <div class="gallery-card-body">
+                        <span class="gallery-tag">Beverages</span>
+                        <span class="gallery-mess-tag">Architecture Mess</span>
+                        <h3>Cold Coffee</h3>
+                        <p>A refreshing drink for warm afternoons and study refreshment.</p>
+                    </div>
+                </article>
+            </div>
+        </section>
+
         <section class="roles">
             <h2>Choose your dashboard</h2>
             <div class="role-grid">
@@ -120,6 +233,75 @@
             </div>
         </section>
 
+        <section class="contact" aria-labelledby="contact-title">
+            <h2 id="contact-title">Get in Touch</h2>
+            <p class="contact-subtitle">Reach out for support, feedback, or help with your campus mess ordering experience.</p>
+
+            <div class="contact-grid">
+                <article class="contact-card">
+                    <h3>Email Support</h3>
+                    <p>Send your queries, suggestions, or issue reports to our support inbox.</p>
+                    <p><a href="mailto:atharva.ambalge24@pccoepune.org">atharva.ambalge24@pccoepune.org</a></p>
+                    <p><a href="mailto:aditya.more24@pccoepune.org">aditya.more24@pccoepune.org</a></p>
+                </article>
+                <article class="contact-card">
+                    <h3>Phone Support</h3>
+                    <p>Call us if you need quick help with login, orders, or menu access.</p>
+                    <p><a href="tel:+91727608388">+91 7276084388</a></p>
+                    <p><a href="tel:+919322189377">+91 9322189377</a></p>
+                </article>
+                <article class="contact-card">
+                    <h3>Campus Location</h3>
+                    <p>PCCOE, Nigdi, Pune. Visit during college hours for in-person guidance.</p>
+                    <p><a href="https://maps.google.com/?q=Pimpri+Chinchwad+College+of+Engineering" target="_blank" rel="noreferrer">Open in Maps</a></p>
+                </article>
+            </div>
+        </section>
+
+        <section class="developers" aria-labelledby="developers-title">
+            <h2 id="developers-title">Meet the Developers</h2>
+            <p class="developers-subtitle">The project was developed as a campus ordering solution for PCCOE students and mess owners.</p>
+
+            <div class="developers-grid">
+                <article class="developer-card">
+                    <div class="developer-media">
+                        <img src="Atharva.jpeg" alt="Atharva Prashant Ambalge" class="developer-photo" loading="lazy">
+                        <div class="developer-overlay" aria-label="Atharva social links">
+                            <a class="developer-icon-link" href="https://github.com/athravambalge-boop" target="_blank" rel="noreferrer" aria-label="Atharva GitHub profile">
+                                <svg class="developer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path fill="currentColor" d="M12 2C6.48 2 2 6.58 2 12.22c0 4.52 2.87 8.35 6.84 9.7.5.1.68-.22.68-.49 0-.24-.01-.89-.01-1.75-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.9 1.57 2.36 1.12 2.94.86.09-.67.35-1.12.64-1.37-2.22-.26-4.56-1.14-4.56-5.08 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.05A9.27 9.27 0 0 1 12 6.84c.85 0 1.7.12 2.5.36 1.9-1.32 2.74-1.05 2.74-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.95-2.35 4.81-4.58 5.07.36.32.68.95.68 1.91 0 1.38-.01 2.49-.01 2.83 0 .27.18.6.69.49A10.24 10.24 0 0 0 22 12.22C22 6.58 17.52 2 12 2Z"/>
+                                </svg>
+                            </a>
+                            <a class="developer-icon-link" href="https://www.linkedin.com/in/atharva-ambalge-69ab14328/" target="_blank" rel="noreferrer" aria-label="Atharva LinkedIn profile">
+                                <svg class="developer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path fill="currentColor" d="M19 3A2 2 0 0 1 21 5v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14Zm-.53 15.5v-5.2c0-2.79-1.49-4.09-3.48-4.09a3.03 3.03 0 0 0-2.74 1.51v-1.3h-2.79v9.08h2.79v-5.33c0-1.41.27-2.78 2.02-2.78 1.72 0 1.75 1.61 1.75 2.87v5.24h2.45ZM6.88 8.17a1.62 1.62 0 1 0 0-3.24 1.62 1.62 0 0 0 0 3.24ZM8.28 18.5V9.42H5.5v9.08h2.78Z"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                    <h3>Atharva Prashant Ambalge</h3>
+                </article>
+                <article class="developer-card">
+                    <div class="developer-media">
+                        <img src="Aditya.jpeg" alt="Aditya Dinesh More" class="developer-photo" loading="lazy">
+                        <div class="developer-overlay" aria-label="Aditya social links">
+                            <a class="developer-icon-link" href="https://github.com/adityamore1705-cyber" target="_blank" rel="noreferrer" aria-label="Aditya GitHub profile">
+                                <svg class="developer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path fill="currentColor" d="M12 2C6.48 2 2 6.58 2 12.22c0 4.52 2.87 8.35 6.84 9.7.5.1.68-.22.68-.49 0-.24-.01-.89-.01-1.75-2.78.62-3.37-1.37-3.37-1.37-.45-1.18-1.11-1.49-1.11-1.49-.91-.64.07-.63.07-.63 1 .07 1.53 1.05 1.53 1.05.9 1.57 2.36 1.12 2.94.86.09-.67.35-1.12.64-1.37-2.22-.26-4.56-1.14-4.56-5.08 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.27 2.75 1.05A9.27 9.27 0 0 1 12 6.84c.85 0 1.7.12 2.5.36 1.9-1.32 2.74-1.05 2.74-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.95-2.35 4.81-4.58 5.07.36.32.68.95.68 1.91 0 1.38-.01 2.49-.01 2.83 0 .27.18.6.69.49A10.24 10.24 0 0 0 22 12.22C22 6.58 17.52 2 12 2Z"/>
+                                </svg>
+                            </a>
+                            <a class="developer-icon-link" href="https://www.linkedin.com/in/aditya-more-992bb326a/" target="_blank" rel="noreferrer" aria-label="Aditya LinkedIn profile">
+                                <svg class="developer-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path fill="currentColor" d="M19 3A2 2 0 0 1 21 5v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14Zm-.53 15.5v-5.2c0-2.79-1.49-4.09-3.48-4.09a3.03 3.03 0 0 0-2.74 1.51v-1.3h-2.79v9.08h2.79v-5.33c0-1.41.27-2.78 2.02-2.78 1.72 0 1.75 1.61 1.75 2.87v5.24h2.45ZM6.88 8.17a1.62 1.62 0 1 0 0-3.24 1.62 1.62 0 0 0 0 3.24ZM8.28 18.5V9.42H5.5v9.08h2.78Z"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                    <h3>Aditya Dinesh More</h3>
+                </article>
+            </div>
+        </section>
+
     </main>
 
     <footer class="site-footer">
@@ -127,5 +309,6 @@
     </footer>
 
     <script src="utils.js"></script>
+    <script src="landing.js"></script>
 </body>
 </html>
