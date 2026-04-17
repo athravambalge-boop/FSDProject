@@ -98,19 +98,24 @@ app.get("/", (req, res) => {
    res.sendFile(path.join(frontendDir, "landing.html"));
 });
 
+async function tableExists(tableName) {
+   const [rows] = await db.query("SHOW TABLES LIKE ?", [tableName]);
+   return rows.length > 0;
+}
+
+async function columnExists(tableName, columnName) {
+   const [rows] = await db.query(`SHOW COLUMNS FROM ${tableName} LIKE ?`, [columnName]);
+   return rows.length > 0;
+}
+
+async function indexExists(tableName, indexName) {
+   const [rows] = await db.query(`SHOW INDEX FROM ${tableName} WHERE Key_name = ?`, [indexName]);
+   return rows.length > 0;
+}
+
 async function ensureWalletSchema() {
    async function addColumnIfMissing(tableName, columnName, definition) {
-      const [rows] = await db.query(
-         `SELECT 1
-          FROM information_schema.COLUMNS
-          WHERE TABLE_SCHEMA = DATABASE()
-            AND TABLE_NAME = ?
-            AND COLUMN_NAME = ?
-          LIMIT 1`,
-         [tableName, columnName]
-      );
-
-      if (rows.length === 0) {
+      if (!(await columnExists(tableName, columnName))) {
          await db.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
       }
    }
@@ -138,49 +143,19 @@ async function ensureWalletSchema() {
 
 async function ensurePaymentSchema() {
    async function addColumnIfMissing(tableName, columnName, definition) {
-      const [rows] = await db.query(
-         `SELECT 1
-          FROM information_schema.COLUMNS
-          WHERE TABLE_SCHEMA = DATABASE()
-            AND TABLE_NAME = ?
-            AND COLUMN_NAME = ?
-          LIMIT 1`,
-         [tableName, columnName]
-      );
-
-      if (rows.length === 0) {
+      if (!(await columnExists(tableName, columnName))) {
          await db.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
       }
    }
 
    async function addIndexIfMissing(tableName, indexName, indexColumnsSql) {
-      const [rows] = await db.query(
-         `SELECT 1
-          FROM information_schema.STATISTICS
-          WHERE TABLE_SCHEMA = DATABASE()
-            AND TABLE_NAME = ?
-            AND INDEX_NAME = ?
-          LIMIT 1`,
-         [tableName, indexName]
-      );
-
-      if (rows.length === 0) {
+      if (!(await indexExists(tableName, indexName))) {
          await db.query(`ALTER TABLE ${tableName} ADD INDEX ${indexName} (${indexColumnsSql})`);
       }
    }
 
    async function dropIndexIfExists(tableName, indexName) {
-      const [rows] = await db.query(
-         `SELECT 1
-          FROM information_schema.STATISTICS
-          WHERE TABLE_SCHEMA = DATABASE()
-            AND TABLE_NAME = ?
-            AND INDEX_NAME = ?
-          LIMIT 1`,
-         [tableName, indexName]
-      );
-
-      if (rows.length > 0) {
+      if (await indexExists(tableName, indexName)) {
          await db.query(`ALTER TABLE ${tableName} DROP INDEX ${indexName}`);
       }
    }
@@ -257,33 +232,13 @@ async function ensurePaymentSchema() {
 
 async function ensureAuthSchema() {
    async function addColumnIfMissing(tableName, columnName, definition) {
-      const [rows] = await db.query(
-         `SELECT 1
-          FROM information_schema.COLUMNS
-          WHERE TABLE_SCHEMA = DATABASE()
-            AND TABLE_NAME = ?
-            AND COLUMN_NAME = ?
-          LIMIT 1`,
-         [tableName, columnName]
-      );
-
-      if (rows.length === 0) {
+      if (!(await columnExists(tableName, columnName))) {
          await db.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
       }
    }
 
    async function addIndexIfMissing(tableName, indexName, indexSql) {
-      const [rows] = await db.query(
-         `SELECT 1
-          FROM information_schema.STATISTICS
-          WHERE TABLE_SCHEMA = DATABASE()
-            AND TABLE_NAME = ?
-            AND INDEX_NAME = ?
-          LIMIT 1`,
-         [tableName, indexName]
-      );
-
-      if (rows.length === 0) {
+      if (!(await indexExists(tableName, indexName))) {
          await db.query(`ALTER TABLE ${tableName} ADD INDEX ${indexName} (${indexSql})`);
       }
    }
@@ -328,18 +283,18 @@ async function ensureAuthSchema() {
 }
 
 async function ensureBaseSchema() {
-   const [tables] = await db.query(
-      `SELECT TABLE_NAME
-       FROM information_schema.TABLES
-       WHERE TABLE_SCHEMA = DATABASE()
-         AND TABLE_NAME IN ('users', 'mess', 'menu_items', 'orders', 'customers')`
-   );
+   const requiredTables = ['users', 'mess', 'menu_items', 'orders', 'customers'];
+   let existingCount = 0;
 
-   const requiredTables = new Set(['users', 'mess', 'menu_items', 'orders', 'customers']);
-   const existingTables = new Set(tables.map((row) => row.TABLE_NAME));
-   const isFreshDatabase = [...requiredTables].every((tableName) => !existingTables.has(tableName));
+   for (const tableName of requiredTables) {
+      if (await tableExists(tableName)) {
+         existingCount += 1;
+      }
+   }
 
-   if (tables.length >= 5) {
+   const isFreshDatabase = existingCount === 0;
+
+   if (existingCount >= requiredTables.length) {
       return;
    }
 
@@ -382,8 +337,9 @@ async function ensureBaseSchema() {
          await db.query(statement);
       } catch (err) {
          const message = err?.sqlMessage || err?.message || "Unknown schema query error";
+         const code = err?.code ? ` (${err.code})` : "";
          console.error("Base schema statement failed:", statement.slice(0, 180));
-         console.error(message);
+         console.error(`${message}${code}`);
          throw err;
       }
    }
@@ -394,6 +350,11 @@ async function runSchemaStep(stepName, stepFn) {
       await stepFn();
    } catch (err) {
       console.error(`Schema step failed: ${stepName}`);
+      if (err?.sqlMessage || err?.message || err?.code) {
+         const message = err?.sqlMessage || err?.message || "Unknown schema error";
+         const code = err?.code ? ` (${err.code})` : "";
+         console.error(`${message}${code}`);
+      }
       console.error(err?.stack || err);
       throw err;
    }
@@ -402,23 +363,28 @@ async function runSchemaStep(stepName, stepFn) {
 /* -------------------------
    START SERVER
 --------------------------*/
-Promise.all([
-   runSchemaStep("base schema", ensureBaseSchema),
-   runSchemaStep("wallet schema", ensureWalletSchema),
-   runSchemaStep("payment schema", ensurePaymentSchema),
-   runSchemaStep("auth schema", ensureAuthSchema)
-])
-   .then(() => {
-      const proofDir = path.join(uploadsDir, "payment-proofs");
-      if (!fs.existsSync(proofDir)) {
-         fs.mkdirSync(proofDir, { recursive: true });
-      }
+async function startServer() {
+   await runSchemaStep("base schema", ensureBaseSchema);
+   await runSchemaStep("wallet schema", ensureWalletSchema);
+   await runSchemaStep("payment schema", ensurePaymentSchema);
+   await runSchemaStep("auth schema", ensureAuthSchema);
 
-      app.listen(PORT, () => {
-         console.log(`Server running at http://localhost:${PORT}`);
-      });
-   })
-   .catch((err) => {
+   const proofDir = path.join(uploadsDir, "payment-proofs");
+   if (!fs.existsSync(proofDir)) {
+      fs.mkdirSync(proofDir, { recursive: true });
+   }
+
+   app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+   });
+}
+
+startServer().catch((err) => {
+      if (err?.sqlMessage || err?.message || err?.code) {
+         const message = err?.sqlMessage || err?.message || "Unknown startup error";
+         const code = err?.code ? ` (${err.code})` : "";
+         console.error(`${message}${code}`);
+      }
       console.error("Failed to initialize database schema:", err?.stack || err);
       process.exit(1);
    });
