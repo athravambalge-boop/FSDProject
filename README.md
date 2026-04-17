@@ -134,9 +134,11 @@ Recommended setup is one Render web service serving both frontend and API.
 
 3. Add env vars in Render dashboard:
 
-- DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT
+- DATABASE_URL or DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT
 - BACKEND_BASE_URL (your Render URL)
 - UPLOADS_DIR=/var/data/uploads
+
+If your database provider gives you a single MySQL connection string, set `DATABASE_URL` and leave the individual `DB_*` fields empty.
 
 4. Attach a persistent disk (already configured in render.yaml).
 

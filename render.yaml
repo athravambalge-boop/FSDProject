@@ -10,6 +10,8 @@ services:
       mountPath: /var/data
       sizeGB: 1
     envVars:
+      - key: DATABASE_URL
+        sync: false
       - key: NODE_VERSION
         value: 18
       - key: UPLOADS_DIR
