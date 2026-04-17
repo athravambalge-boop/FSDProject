@@ -53,6 +53,35 @@
                 const container = document.getElementById('ordersContainer');
                 const emptyMsg = document.getElementById('emptyMessage');
 
+                function extractOrderItems(items) {
+                    if (!items) return [];
+                    if (Array.isArray(items)) return items;
+                    if (typeof items === 'object') return [items];
+
+                    if (typeof items === 'string') {
+                        try {
+                            const parsed = JSON.parse(items);
+                            if (Array.isArray(parsed)) return parsed;
+                            if (parsed && typeof parsed === 'object') return [parsed];
+                        } catch (error) {
+                            console.warn('Failed to parse order items:', error);
+                        }
+                    }
+
+                    return [];
+                }
+
+                function formatOrderItems(items) {
+                    const parsedItems = extractOrderItems(items);
+                    if (parsedItems.length === 0) return 'N/A';
+
+                    const itemNames = parsedItems
+                        .map(item => item && item.name)
+                        .filter(Boolean);
+
+                    return itemNames.length > 0 ? itemNames.join(', ') : 'N/A';
+                }
+
                 if (!orders || orders.length === 0) {
                     container.style.display = 'none';
                     emptyMsg.style.display = 'block';
@@ -79,7 +108,7 @@
                             <strong>Payment:</strong> ${(order.payment_method || 'cash').toUpperCase()} | ${(order.payment_status || 'pending').toUpperCase()}
                         </div>
                         <div style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">
-                            <strong>Items:</strong> ${order.items ? JSON.parse(order.items).map(i => i.name).join(', ') : 'N/A'}
+                            <strong>Items:</strong> ${formatOrderItems(order.items)}
                         </div>
                         <div style="text-align: right; margin-top: 10px;">
                             <button onclick="trackOrder(${order.order_id})" style="width: auto; padding: 8px 16px; font-size: 12px; background: #667eea;">
