@@ -1,10 +1,6 @@
 const messId = localStorage.getItem("mess_id");
 const messName = localStorage.getItem("mess_name") || "My Mess";
 
-/* ========================
-   GUARD - CHECK OWNER ROLE
-======================== */
-
 (function() {
     const session = getUserSession();
     if (session.role !== "owner" || !messId) {
@@ -18,9 +14,6 @@ const messName = localStorage.getItem("mess_name") || "My Mess";
     document.getElementById('messName').textContent = messName;
 })();
 
-/* ========================
-   LOAD DASHBOARD STATS
-======================== */
 async function loadStats() {
     try {
         const res = await fetch(apiUrl(`orders/${messId}/stats/overview`));
@@ -36,10 +29,6 @@ async function loadStats() {
         console.error('Error loading stats:', error);
     }
 }
-
-/* ========================
-   ADD MENU ITEM
-======================== */
 
 async function addItem() {
     const item_name = document.getElementById("itemName").value.trim();
@@ -101,10 +90,6 @@ async function addItem() {
     }
 }
 
-/* ========================
-   LOAD MENU ITEMS
-======================== */
-
 async function loadMenu() {
     try {
         const res = await fetch(apiUrl(`menu/${messId}?include_unavailable=1`));
@@ -148,10 +133,6 @@ async function loadMenu() {
         showToast('Failed to load menu', 'error');
     }
 }
-
-/* ========================
-   TOGGLE ITEM AVAILABILITY
-======================== */
 
 async function toggleItemAvailability(itemId, currentAvailability) {
     const nextAvailability = currentAvailability ? 0 : 1;
@@ -303,12 +284,6 @@ async function loadOrders() {
         document.getElementById("ordersList").innerHTML = "<p style='color:#e74c3c;'>Error loading orders</p>";
         showToast('Failed to load orders', 'error');
     }
-}
-
-/* ========================
-   UPDATE ORDER STATUS
-======================== */
-
 async function updateOrderStatus(orderId) {
     const statusSelect = document.getElementById(`status_${orderId}`);
     const newStatus = statusSelect.value;
@@ -345,12 +320,6 @@ async function updateOrderStatus(orderId) {
         showToast(error.message || 'Failed to update order', 'error');
         statusSelect.value = '';
     }
-}
-
-/* ========================
-   CANCEL ORDER
-======================== */
-
 async function cancelOrder(orderId, customerPhone) {
     if (!confirm('Cancel this order? (Customer will be notified)')) return;
 
@@ -383,12 +352,6 @@ async function cancelOrder(orderId, customerPhone) {
         hideLoading();
         showToast(error.message || 'Failed to cancel order', 'error');
     }
-}
-
-/* ========================
-   DELETE ALL ORDERS
-======================== */
-
 async function deleteAllOrders() {
     const confirmation = prompt('Type DELETE to permanently remove all orders for your mess.');
     if (confirmation !== 'DELETE') {
@@ -436,12 +399,6 @@ async function deleteAllOrders() {
         hideLoading();
         showToast(error.message || 'Failed to delete all orders', 'error');
     }
-}
-
-/* ========================
-   INITIALIZE PAGE
-======================== */
-
 document.addEventListener('DOMContentLoaded', () => {
     loadMenu();
     loadOrders();

@@ -3,9 +3,6 @@ const db = require("../config/db");
 
 const router = express.Router();
 
-/* ========================
-   VALIDATION HELPERS
-======================== */
 function validatePhone(phone) {
   return /^[0-9]{10}$/.test(phone);
 }
@@ -25,9 +22,6 @@ function generatePaymentReference(orderId) {
   return `MM-${orderId}-${suffix}`;
 }
 
-/* ========================
-   PLACE ORDER WITH VALIDATION
-======================== */
 router.post("/place", async (req, res) => {
   let connection;
   try {
@@ -42,22 +36,18 @@ router.post("/place", async (req, res) => {
       payment_method
     } = req.body;
 
-    // Validate required fields
     if (!mess_id || !customer_name || !customer_phone || !items || items.length === 0) {
       return res.status(400).json({ error: "Missing required fields: mess_id, customer_name, customer_phone, items" });
     }
 
-    // Validate phone number (10 digits)
     if (!validatePhone(customer_phone)) {
       return res.status(400).json({ error: "Invalid phone number. Please enter a 10-digit number." });
     }
 
-    // Validate name
     if (!validateName(customer_name)) {
       return res.status(400).json({ error: "Name must be between 2-100 characters." });
     }
 
-    // Validate items
     if (items.some(item => !item.item_id || !item.quantity || item.quantity < 1)) {
       return res.status(400).json({ error: "Invalid items. Each item must have quantity >= 1" });
     }

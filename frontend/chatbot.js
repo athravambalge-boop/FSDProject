@@ -388,7 +388,6 @@
     function startEatingLoop(launcher) {
         const eatNow = () => {
             launcher.classList.remove('cb-eating');
-            // Force reflow so repeated class toggles retrigger animation.
             void launcher.offsetWidth;
             launcher.classList.add('cb-eating');
             setTimeout(() => {

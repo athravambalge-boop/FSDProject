@@ -3,10 +3,6 @@ const db = require("../config/db");
 
 const router = express.Router();
 
-/* -------------------------
-   GET ALL MESSES (WITH SEARCH & FILTER)
---------------------------*/
-
 router.get("/", async (req, res) => {
 
 try{
@@ -15,14 +11,12 @@ const { search, location } = req.query;
 let query = "SELECT * FROM mess WHERE 1=1";
 const params = [];
 
-// Search by name or location
 if (search) {
   query += " AND (name LIKE ? OR location LIKE ?)";
   const searchTerm = `%${search}%`;
   params.push(searchTerm, searchTerm);
 }
 
-// Filter by location
 if (location) {
   query += " AND location LIKE ?";
   params.push(`%${location}%`);

@@ -1,7 +1,3 @@
-/* ========================
-   LOAD MESSES WITH FILTERS
-======================== */
-
 async function loadMess(search = '', location = '') {
     try {
         showLoading();
@@ -22,11 +18,8 @@ async function loadMess(search = '', location = '') {
         const messes = await res.json();
         const container = document.getElementById("mess-container");
         
-        // Fade out old content
         container.style.opacity = '0';
         container.style.transition = 'opacity 0.3s ease-out';
-        
-        // Wait for fade out, then update content
         await new Promise(resolve => setTimeout(resolve, 300));
         container.innerHTML = "";
 
@@ -66,7 +59,6 @@ async function loadMess(search = '', location = '') {
             container.appendChild(card);
         });
 
-        // Fade in new content
         container.style.opacity = '1';
         hideLoadingSmoothly();
     } catch (error) {
@@ -87,10 +79,6 @@ async function loadMess(search = '', location = '') {
     }
 }
 
-/* ========================
-   APPLY FILTERS
-======================== */
-
 function applyFilters() {
     const search = document.getElementById('searchInput').value;
     const location = document.getElementById('locationFilter').value;
@@ -98,17 +86,9 @@ function applyFilters() {
     loadMess(search, location);
 }
 
-/* ========================
-   NAVIGATE TO ORDER PAGE
-======================== */
-
 function orderFood(id) {
     window.location.href = `mess.html?id=${id}`;
 }
-
-/* ========================
-   USER SESSION MANAGEMENT
-======================== */
 
 function initializeUserBar() {
     const session = getUserSession();
@@ -128,11 +108,6 @@ function initializeUserBar() {
     }
 }
 
-/* ========================
-   INITIALIZE PAGE
-======================== */
-
-// Debounce function to avoid too many API calls
 let debounceTimer;
 function debounceSearch() {
     clearTimeout(debounceTimer);
@@ -145,7 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const session = getUserSession();
 
     if (!session.role) {
-        // Keep landing as the first touchpoint for unauthenticated visitors.
         window.location.href = 'landing.html';
         return;
     }

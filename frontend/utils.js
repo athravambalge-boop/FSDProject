@@ -1,7 +1,3 @@
-/* ========================
-   TOAST NOTIFICATIONS
-======================== */
-
 const THEME_STORAGE_KEY = 'theme-preference';
 
 function getStoredThemePreference() {
@@ -79,10 +75,6 @@ function createToastContainer() {
     document.body.appendChild(container);
     return container;
 }
-
-/* ========================
-   LOADING STATES
-======================== */
 
 function showLoading(elementId = null) {
     if (elementId) {

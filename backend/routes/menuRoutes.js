@@ -3,9 +3,7 @@ const db = require("../config/db");
 
 const router = express.Router();
 
-/* -------------------------
-   GET ALL ITEMS FOR A MESS
---------------------------*/
+
 router.get("/:mess_id", async (req, res) => {
   try {
     const includeUnavailable = req.query.include_unavailable === "1";

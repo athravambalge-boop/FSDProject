@@ -208,7 +208,6 @@ async function loadMess(){
     window.insertOrderStatusRuleTemplate = insertOrderStatusRuleTemplate;
     window.formatChatbotIntentJson = formatChatbotIntentJson;
 
-// ensure only admin can access
 (function(){
     const role = localStorage.getItem("role");
     if (role !== "admin") {
@@ -217,8 +216,6 @@ async function loadMess(){
     }
 })();
 
-
-/* ADD MESS */
 
 async function addMess(){
     try {
@@ -256,8 +253,6 @@ async function addMess(){
 }
 
 
-/* DELETE MESS */
-
 async function deleteMess(id){
     const res = await fetch(apiUrl(`mess/${id}`),{
         method:"DELETE"
@@ -279,7 +274,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateIntentCounter();
 });
 
-// Edit Modal Functions
 async function openEditModal(messId) {
     try {
         const res = await fetch(apiUrl(`mess/${messId}`));
@@ -340,7 +334,6 @@ async function saveEditMess() {
     }
 }
 
-// Close modal when clicking outside
 window.addEventListener('click', function(event) {
     const modal = document.getElementById("editModal");
     if (event.target === modal) {

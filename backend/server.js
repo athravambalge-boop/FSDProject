@@ -61,13 +61,9 @@ function mapLegacyPhonePeEnvNames() {
 
 mapLegacyPhonePeEnvNames();
 
-/* -------------------------
-   MIDDLEWARE
---------------------------*/
 app.use(
    cors({
       origin(origin, callback) {
-         // Allow same-origin or non-browser clients that do not send Origin.
          if (!origin) return callback(null, true);
          if (allowedOrigins.includes(origin)) return callback(null, true);
          return callback(new Error("Not allowed by CORS"));
@@ -79,9 +75,6 @@ app.use(express.json());
 app.use("/uploads", express.static(uploadsDir));
 app.use(express.static(frontendDir));
 
-/* -------------------------
-   ROUTES
---------------------------*/
 const authRoutes = require("./routes/authRoutes");
 const messRoutes = require("./routes/messRoutes");
 const menuRoutes = require("./routes/menuRoutes");

@@ -135,12 +135,7 @@ async function login() {
     }
 }
 
-/* ========================
-   INITIALIZE LOGIN PAGE
-======================== */
-
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if already logged in
     if (isLoggedIn()) {
         const session = getUserSession();
         if (session.role === 'owner') {
@@ -152,7 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Enter key to login
     document.getElementById('password')?.addEventListener('keyup', (e) => {
         if (e.key === 'Enter') {
             login();

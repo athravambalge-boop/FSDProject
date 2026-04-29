@@ -75,7 +75,6 @@ async function getUserByUsername(connection, username) {
   return rows[0] || null;
 }
 
-/* LOGIN ROUTE */
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -108,7 +107,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-/* REQUEST SIGNUP OTP */
+
 router.post("/request-signup-otp", async (req, res) => {
   try {
     const { fullName, contactType, contactValue } = req.body;
@@ -169,7 +168,7 @@ router.post("/request-signup-otp", async (req, res) => {
   }
 });
 
-/* VERIFY SIGNUP OTP */
+
 router.post("/verify-signup-otp", async (req, res) => {
   try {
     const { fullName, contactType, contactValue, otp } = req.body;
@@ -235,7 +234,7 @@ router.post("/verify-signup-otp", async (req, res) => {
   }
 });
 
-/* COMPLETE SIGNUP AFTER OTP VERIFICATION */
+
 router.post("/complete-signup", async (req, res) => {
   let connection;
   try {
@@ -375,7 +374,7 @@ router.post("/complete-signup", async (req, res) => {
   }
 });
 
-/* REQUEST PASSWORD RESET OTP */
+
 router.post("/request-password-reset-otp", async (req, res) => {
   try {
     const { contactType, contactValue } = req.body;
@@ -542,7 +541,7 @@ router.post("/verify-password-reset-by-username", async (req, res) => {
   }
 });
 
-/* RESET PASSWORD BY USERNAME */
+
 router.post("/reset-password-by-username", async (req, res) => {
   let connection;
   try {
@@ -626,7 +625,7 @@ router.post("/reset-password-by-username", async (req, res) => {
   }
 });
 
-/* VERIFY PASSWORD RESET OTP */
+
 router.post("/verify-password-reset-otp", async (req, res) => {
   try {
     const { contactType, contactValue, otp } = req.body;
@@ -680,7 +679,7 @@ router.post("/verify-password-reset-otp", async (req, res) => {
   }
 });
 
-/* RESET PASSWORD */
+
 router.post("/reset-password", async (req, res) => {
   let connection;
   try {
