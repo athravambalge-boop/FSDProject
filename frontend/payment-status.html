@@ -197,7 +197,7 @@
                 await renderQrImage(config.qr_image_url || 'QR.jpeg');
 
                 if ((order.payment_status || '').toLowerCase() === 'paid') {
-                    setStatus('Payment Already Verified', 'This order is already confirmed.', 'success');
+                    setStatus('Payment Verified', 'This order is confirmed.', 'success');
                     document.getElementById('trackBtn').style.display = 'inline-block';
                 }
             } catch (error) {
@@ -267,7 +267,7 @@
 
                 if (!response.ok) {
                     if (isLegacyDuplicateError(result.error || result.message)) {
-                        setStatus('Screenshot Uploaded', 'Now share on WhatsApp to place your order.', 'warning');
+                        setStatus('Payment Verified', 'Please share on WhatsApp to complete your order.', 'success');
                         document.getElementById('shareWhatsAppBtn').style.display = 'inline-block';
                         return;
                     }
@@ -277,7 +277,7 @@
                 uploadedProofUrl = result.proof_image_url || '';
 
                 if ((result.payment_status || '').toLowerCase() === 'paid') {
-                    setStatus('Screenshot Uploaded', result.message || 'Now share on WhatsApp to place your order.', 'warning');
+                    setStatus('Payment Verified', result.message || 'Please share on WhatsApp to complete your order.', 'success');
                     document.getElementById('shareWhatsAppBtn').style.display = 'inline-block';
                 } else if ((result.payment_proof_status || '').toLowerCase() === 'under_review') {
                     setStatus('Under Review', result.message || 'Receipt uploaded and sent for review.', 'warning');
@@ -289,7 +289,7 @@
                 const msg = error.message || 'Unable to upload receipt right now.';
                 const isLegacyDuplicate = String(msg).toLowerCase().includes('already used') || String(msg).toLowerCase().includes('similar receipt image was already submitted');
                 if (isLegacyDuplicate) {
-                    setStatus('Screenshot Uploaded', 'Now share on WhatsApp to place your order.', 'warning');
+                    setStatus('Payment Verified', 'Please share on WhatsApp to complete your order.', 'success');
                     document.getElementById('shareWhatsAppBtn').style.display = 'inline-block';
                 } else {
                     setStatus('Upload Failed', msg, 'error');
