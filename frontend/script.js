@@ -1,3 +1,56 @@
+function openImageModal(imageSrc) {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    modalImage.src = imageSrc;
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('imageModal');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// Close modal when clicking on the overlay
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('imageModal');
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeImageModal();
+            }
+        });
+    }
+});
+
+function getMessImageContent(messName) {
+    const name = (messName || "").toLowerCase().trim();
+
+    // Architecture Building's Mess - use image grid with both 1.jpeg and 2.jpeg
+    if (name.includes("architecture") || name.includes("arch")) {
+        return `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; height: 220px; padding: 8px; background: linear-gradient(135deg, #f5f5f5, #ffffff); border-radius: 8px;">
+                <img src="1.jpeg" class="mess-img" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer;" onclick="event.stopPropagation(); openImageModal('1.jpeg');" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22220%22%3E%3Crect fill=%22%23667eea%22 width=%22150%22 height=%22220%22/%3E%3C/svg%3E'">
+                <img src="2.jpeg" class="mess-img" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer;" onclick="event.stopPropagation(); openImageModal('2.jpeg');" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22150%22 height=%22220%22%3E%3Crect fill=%22%23667eea%22 width=%22150%22 height=%22220%22/%3E%3C/svg%3E'">
+            </div>
+        `;
+    }
+
+    // Old Girl's hostel mess - use 3.jpeg
+    if (name.includes("old girl") || name.includes("girls")) {
+        return `<img src="3.jpeg" class="mess-img" style="cursor: pointer;" onclick="event.stopPropagation(); openImageModal('3.jpeg');" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22200%22%3E%3Crect fill=%22%23667eea%22 width=%22300%22 height=%22200%22/%3E%3Ctext fill=%22white%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3EMess Image%3C/text%3E%3C/svg%3E'">`;
+    }
+
+    // Nescafe - use 4.jpeg
+    if (name.includes("nescafé") || name.includes("nescafe") || name.includes("cafe")) {
+        return `<img src="4.jpeg?v=${Date.now()}" class="mess-img" style="width: 100%; height: 200px; object-fit: cover; border-radius: 6px; cursor: pointer;" onclick="event.stopPropagation(); openImageModal('4.jpeg');" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22200%22%3E%3Crect fill=%22%23667eea%22 width=%22300%22 height=%22200%22/%3E%3Ctext fill=%22white%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3EMess Image%3C/text%3E%3C/svg%3E'">`;
+    }
+
+    // Default fallback
+    return `<img src="Hostel_Mess_small.jpg" class="mess-img" style="cursor: pointer;" onclick="event.stopPropagation(); openImageModal('Hostel_Mess_small.jpg');" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22200%22%3E%3Crect fill=%22%23667eea%22 width=%22300%22 height=%22200%22/%3E%3Ctext fill=%22white%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3EMess Image%3C/text%3E%3C/svg%3E'">`;
+}
+
 async function loadMess(search = '', location = '') {
     try {
         showLoading();
@@ -46,8 +99,9 @@ async function loadMess(search = '', location = '') {
                     orderFood(mess.mess_id);
                 }
             });
+            const imageContent = getMessImageContent(mess.name);
             card.innerHTML = `
-                <img src="Hostel_Mess_small.jpg" class="mess-img" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22200%22%3E%3Crect fill=%22%23667eea%22 width=%22300%22 height=%22200%22/%3E%3Ctext fill=%22white%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3EMess Image%3C/text%3E%3C/svg%3E'">
+                ${imageContent}
                 <div class="mess-info">
                     <h2>${mess.name}</h2>
                     <p class="location">📍 ${mess.location}</p>

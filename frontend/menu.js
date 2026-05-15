@@ -108,6 +108,10 @@ function getFoodImage(item) {
     return "cold coffee.png";
   }
 
+  if (itemName.includes("rice") ) {
+    return "rice.jpg";
+  }
+
   const seed = `${item.category || "food"}-${item.item_name || "item"}`;
   return `https://picsum.photos/seed/${encodeURIComponent(seed)}/640/360`;
 }
