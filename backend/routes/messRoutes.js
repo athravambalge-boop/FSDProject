@@ -10,21 +10,25 @@ try{
 const { search, location } = req.query;
 let query = "SELECT * FROM mess WHERE 1=1";
 const params = [];
+let paramIndex = 1;
 
 if (search) {
-  query += " AND (name LIKE ? OR location LIKE ?)";
+  query += ` AND (name ILIKE $${paramIndex} OR location ILIKE $${paramIndex+1})`;
   const searchTerm = `%${search}%`;
   params.push(searchTerm, searchTerm);
+  paramIndex += 2;
 }
 
 if (location) {
-  query += " AND location LIKE ?";
+  query += ` AND location ILIKE $${paramIndex}`;
   params.push(`%${location}%`);
+  paramIndex += 1;
 }
 
 query += " ORDER BY name ASC";
 
-const [rows] = await db.query(query, params);
+const result = await db.query(query, params);
+const rows = result.rows;
 
 res.json(rows);
 
@@ -46,10 +50,11 @@ router.get("/:id", async (req, res) => {
 
 try{
 
-const [rows] = await db.query(
-"SELECT * FROM mess WHERE mess_id=?",
+const result = await db.query(
+"SELECT * FROM mess WHERE mess_id=$1",
 [req.params.id]
 );
+const rows = result.rows;
 
 if(rows.length === 0){
 return res.status(404).json({error:"Mess not found"});
@@ -76,13 +81,14 @@ try{
 
 const { phone } = req.params;
 
-const [favorites] = await db.query(
+const result = await db.query(
 `SELECT m.* FROM mess m
 JOIN favorites f ON m.mess_id = f.mess_id
-WHERE f.customer_phone = ?
+WHERE f.customer_phone = $1
 ORDER BY f.added_at DESC`,
 [phone]
 );
+const favorites = result.rows;
 
 res.json(favorites);
 
@@ -111,8 +117,8 @@ if (!customer_phone || !mess_id) {
 
 await db.query(
 `INSERT INTO favorites (customer_phone, mess_id) 
-VALUES (?, ?)
-ON DUPLICATE KEY UPDATE added_at = CURRENT_TIMESTAMP`,
+VALUES ($1, $2)
+ON CONFLICT (customer_phone, mess_id) DO UPDATE SET added_at = CURRENT_TIMESTAMP`,
 [customer_phone, mess_id]
 );
 
@@ -138,7 +144,7 @@ try{
 const { phone, messId } = req.params;
 
 await db.query(
-`DELETE FROM favorites WHERE customer_phone = ? AND mess_id = ?`,
+`DELETE FROM favorites WHERE customer_phone = $1 AND mess_id = $2`,
 [phone, messId]
 );
 
@@ -166,8 +172,8 @@ const {name, location, veg_type, contact_number} = req.body;
 
 await db.query(
 `UPDATE mess 
-SET name=?, location=?, veg_type=?, contact_number=? 
-WHERE mess_id=?`,
+SET name=$1, location=$2, veg_type=$3, contact_number=$4 
+WHERE mess_id=$5`,
 [name, location, veg_type, contact_number, req.params.id]
 );
 
@@ -191,14 +197,15 @@ router.get("/:id/menu", async (req, res) => {
 
 try{
 
-const [rows] = await db.query(
+const result = await db.query(
 `SELECT breakfast,lunch,dinner
 FROM menu
-WHERE mess_id=?
+WHERE mess_id=$1
 ORDER BY menu_date DESC
 LIMIT 1`,
 [req.params.id]
 );
+const rows = result.rows;
 
 if(rows.length === 0){
 return res.json({});
@@ -229,17 +236,14 @@ const {breakfast,lunch,dinner} = req.body;
 await db.query(
 
 `INSERT INTO menu(mess_id,menu_date,breakfast,lunch,dinner)
-VALUES(?,CURDATE(),?,?,?)
-ON DUPLICATE KEY UPDATE
-breakfast=?,
-lunch=?,
-dinner=?`,
+VALUES($1,CURRENT_DATE,$2,$3,$4)
+ON CONFLICT (mess_id, menu_date) DO UPDATE SET
+breakfast=$2,
+lunch=$3,
+dinner=$4`,
 
 [
 req.params.id,
-breakfast,
-lunch,
-dinner,
 breakfast,
 lunch,
 dinner

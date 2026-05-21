@@ -72,12 +72,13 @@ router.get("/receipt-config", async (req, res) => {
       return res.status(400).json({ error: "order_id is required" });
     }
 
-    const [orderRows] = await db.query(
+    const result = await db.query(
       `SELECT order_id, customer_phone, total_amount, payment_status, payment_reference, payment_order_id
        FROM orders
-       WHERE order_id = ?`,
+       WHERE order_id = $1`,
       [orderId]
     );
+    const orderRows = result.rows;
 
     if (orderRows.length === 0) {
       return res.status(404).json({ error: "Order not found" });
@@ -125,12 +126,13 @@ router.post("/upload-proof", upload.single("receipt"), async (req, res) => {
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    const [orderRows] = await connection.query(
+    const result = await connection.query(
       `SELECT order_id, customer_phone, total_amount, payment_status, payment_reference, payment_order_id
        FROM orders
-       WHERE order_id = ? FOR UPDATE`,
+       WHERE order_id = $1 FOR UPDATE`,
       [orderId]
     );
+    const orderRows = result.rows;
 
     if (orderRows.length === 0) {
       await connection.rollback();
@@ -174,7 +176,7 @@ router.post("/upload-proof", upload.single("receipt"), async (req, res) => {
          order_id, customer_phone, file_path, image_sha256, perceptual_hash,
          extracted_text, extracted_utr, receiver_match, amount_match, reference_match,
          ai_risk_flag, verification_result, verification_reason
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [
         orderId,
         order.customer_phone,
@@ -196,17 +198,17 @@ router.post("/upload-proof", upload.single("receipt"), async (req, res) => {
       `UPDATE orders
        SET payment_status = 'paid',
            payment_proof_status = 'verified',
-           payment_proof_image = ?,
-           payment_id = ?,
+           payment_proof_image = $1,
+           payment_id = $2,
            paid_at = NOW(),
            updated_at = CURRENT_TIMESTAMP
-       WHERE order_id = ?`,
+       WHERE order_id = $3`,
       [relativePath, extractedUtr, orderId]
     );
 
     await connection.query(
       `INSERT INTO payment_events (order_id, payment_order_id, payment_id, event_type, status, amount, gateway_payload)
-       VALUES (?, ?, ?, 'manual_proof_upload', ?, ?, ?)`,
+       VALUES ($1, $2, $3, 'manual_proof_upload', $4, $5, $6)`,
       [
         orderId,
         order.payment_order_id || order.payment_reference,
@@ -251,25 +253,27 @@ router.get("/order/:order_id", async (req, res) => {
       return res.status(400).json({ error: "Invalid order_id" });
     }
 
-    const [paymentRows] = await db.query(
+    const result = await db.query(
       `SELECT order_id, payment_method, payment_status, payment_provider, payment_order_id, payment_reference, payment_proof_status, payment_proof_image, payment_id, paid_at, refunded_at
        FROM orders
-       WHERE order_id = ?`,
+       WHERE order_id = $1`,
       [orderId]
     );
+    const paymentRows = result.rows;
 
     if (paymentRows.length === 0) {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    const [events] = await db.query(
+    const result2 = await db.query(
       `SELECT event_id, payment_order_id, payment_id, event_type, status, amount, created_at
        FROM payment_events
-       WHERE order_id = ?
+       WHERE order_id = $1
        ORDER BY created_at DESC
        LIMIT 20`,
       [orderId]
     );
+    const events = result2.rows;
 
     return res.json({
       order_payment: paymentRows[0],

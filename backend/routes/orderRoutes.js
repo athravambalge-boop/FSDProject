@@ -59,13 +59,14 @@ router.post("/place", async (req, res) => {
       return res.status(400).json({ error: "Invalid items selected" });
     }
 
-    const placeholders = requestedItemIds.map(() => "?").join(",");
-    const [menuItems] = await db.query(
+    const placeholders = requestedItemIds.map((_, i) => `$${i + 2}`).join(",");
+    const result = await db.query(
       `SELECT item_id, item_name, item_price, is_available
        FROM menu_items
-       WHERE mess_id = ? AND item_id IN (${placeholders})`,
+       WHERE mess_id = $1 AND item_id IN (${placeholders})`,
       [mess_id, ...requestedItemIds]
     );
+    const menuItems = result.rows;
 
     if (menuItems.length !== requestedItemIds.length) {
       return res.status(400).json({ error: "One or more selected items are invalid" });
@@ -113,15 +114,16 @@ router.post("/place", async (req, res) => {
     // Ensure customer exists for wallet operations
     await connection.query(
       `INSERT INTO customers (phone, name, email)
-       VALUES (?, ?, ?)
-       ON DUPLICATE KEY UPDATE name = VALUES(name), email = VALUES(email)`,
+       VALUES ($1, $2, $3)
+       ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name, email = EXCLUDED.email`,
       [customer_phone, customer_name.trim(), customer_email || null]
     );
 
-    const [customerRows] = await connection.query(
-      `SELECT wallet_balance FROM customers WHERE phone = ? FOR UPDATE`,
+    const result2 = await connection.query(
+      `SELECT wallet_balance FROM customers WHERE phone = $1 FOR UPDATE`,
       [customer_phone]
     );
+    const customerRows = result2.rows;
 
     const walletBalance = toMoney(customerRows[0]?.wallet_balance || 0);
     const walletUsed = use_wallet ? Math.min(walletBalance, total_amount) : 0;
@@ -132,11 +134,12 @@ router.post("/place", async (req, res) => {
      const initialProofStatus = selectedPaymentMethod === 'online' ? 'not_uploaded' : 'not_uploaded';
 
      // Insert order
-    const [result] = await connection.query(
+    const result3 = await connection.query(
       `INSERT INTO orders (
           mess_id, customer_name, customer_phone, customer_email, items,
          total_amount, wallet_used, cashback_earned, status, payment_method, payment_status, payment_proof_status, special_instructions
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, $10, $11, $12)
+       RETURNING order_id`,
       [
         mess_id,
         customer_name.trim(),
@@ -152,31 +155,32 @@ router.post("/place", async (req, res) => {
         special_instructions || null
       ]
     );
+    const orderId = result3.rows[0].order_id;
 
     let paymentReference = null;
     if (selectedPaymentMethod === 'online') {
-      paymentReference = generatePaymentReference(result.insertId);
+      paymentReference = generatePaymentReference(orderId);
       await connection.query(
         `UPDATE orders
-         SET payment_reference = ?, payment_order_id = ?, payment_provider = 'manual_qr'
-         WHERE order_id = ?`,
-        [paymentReference, paymentReference, result.insertId]
+         SET payment_reference = $1, payment_order_id = $2, payment_provider = 'manual_qr'
+         WHERE order_id = $3`,
+        [paymentReference, paymentReference, orderId]
       );
     }
 
     if (walletUsed > 0) {
       await connection.query(
         `INSERT INTO wallet_transactions (customer_phone, type, amount, reference_order_id, note)
-         VALUES (?, 'debit', ?, ?, ?)`,
-        [customer_phone, walletUsed, result.insertId, 'Wallet used for order payment']
+         VALUES ($1, 'debit', $2, $3, $4)`,
+        [customer_phone, walletUsed, orderId, 'Wallet used for order payment']
       );
     }
 
     if (cashbackEarned > 0) {
       await connection.query(
         `INSERT INTO wallet_transactions (customer_phone, type, amount, reference_order_id, note)
-         VALUES (?, 'credit', ?, ?, ?)`,
-        [customer_phone, cashbackEarned, result.insertId, `${CASHBACK_PERCENT}% cashback credited`]
+         VALUES ($1, 'credit', $2, $3, $4)`,
+        [customer_phone, cashbackEarned, orderId, `${CASHBACK_PERCENT}% cashback credited`]
       );
     }
 
@@ -186,9 +190,9 @@ router.post("/place", async (req, res) => {
     await connection.query(
       `UPDATE customers
        SET total_orders = total_orders + 1,
-           total_spent = total_spent + ?,
-           wallet_balance = ?
-       WHERE phone = ?`,
+           total_spent = total_spent + $1,
+           wallet_balance = $2
+       WHERE phone = $3`,
       [payableAmount, updatedWalletBalance, customer_phone]
     );
 
@@ -196,7 +200,7 @@ router.post("/place", async (req, res) => {
 
     res.json({
       message: "Order placed successfully",
-      order_id: result.insertId,
+      order_id: orderId,
       total_amount: payableAmount,
       payment_reference: paymentReference,
       wallet_used: walletUsed,
@@ -225,11 +229,12 @@ router.post("/place", async (req, res) => {
 ======================== */
 router.get("/status/:order_id", async (req, res) => {
   try {
-    const [rows] = await db.query(
+    const result = await db.query(
       `SELECT order_id, customer_name, customer_phone, mess_id, total_amount, status, payment_method, payment_status, payment_reference, payment_proof_status, payment_proof_image, items, created_at, updated_at 
-       FROM orders WHERE order_id = ?`,
+       FROM orders WHERE order_id = $1`,
       [req.params.order_id]
     );
+    const rows = result.rows;
 
     if (rows.length === 0) {
       return res.status(404).json({ error: "Order not found" });
@@ -253,11 +258,12 @@ router.get("/customer/:phone", async (req, res) => {
       return res.status(400).json({ error: "Invalid phone number" });
     }
 
-    const [rows] = await db.query(
+    const result = await db.query(
       `SELECT order_id, mess_id, customer_name, total_amount, wallet_used, cashback_earned, status, payment_method, payment_status, payment_reference, payment_proof_status, payment_proof_image, items, created_at, updated_at 
-       FROM orders WHERE customer_phone = ? ORDER BY created_at DESC LIMIT 20`,
+       FROM orders WHERE customer_phone = $1 ORDER BY created_at DESC LIMIT 20`,
       [phone]
     );
+    const rows = result.rows;
 
     res.json(rows);
   } catch (err) {
@@ -277,12 +283,13 @@ router.get("/customer/:phone/profile", async (req, res) => {
       return res.status(400).json({ error: "Invalid phone number" });
     }
 
-    const [rows] = await db.query(
+    const result = await db.query(
       `SELECT phone, name, email, total_orders, total_spent, wallet_balance, created_at, updated_at
        FROM customers
-       WHERE phone = ?`,
+       WHERE phone = $1`,
       [phone]
     );
+    const rows = result.rows;
 
     if (rows.length === 0) {
       return res.status(404).json({ error: "Customer not found" });
@@ -306,14 +313,15 @@ router.get("/customer/:phone/wallet/transactions", async (req, res) => {
       return res.status(400).json({ error: "Invalid phone number" });
     }
 
-    const [rows] = await db.query(
+    const result = await db.query(
       `SELECT transaction_id, customer_phone, type, amount, reference_order_id, note, created_at
        FROM wallet_transactions
-       WHERE customer_phone = ?
+       WHERE customer_phone = $1
        ORDER BY created_at DESC
        LIMIT 30`,
       [phone]
     );
+    const rows = result.rows;
 
     res.json(rows);
   } catch (err) {
@@ -343,10 +351,11 @@ router.post("/customer/:phone/wallet/cashback", async (req, res) => {
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    const [customerRows] = await connection.query(
-      `SELECT phone, wallet_balance FROM customers WHERE phone = ? FOR UPDATE`,
+    const result = await connection.query(
+      `SELECT phone, wallet_balance FROM customers WHERE phone = $1 FOR UPDATE`,
       [phone]
     );
+    const customerRows = result.rows;
 
     if (customerRows.length === 0) {
       return res.status(404).json({ error: "Customer not found" });
@@ -356,13 +365,13 @@ router.post("/customer/:phone/wallet/cashback", async (req, res) => {
     const updatedBalance = toMoney(currentBalance + amount);
 
     await connection.query(
-      `UPDATE customers SET wallet_balance = ? WHERE phone = ?`,
+      `UPDATE customers SET wallet_balance = $1 WHERE phone = $2`,
       [updatedBalance, phone]
     );
 
     await connection.query(
       `INSERT INTO wallet_transactions (customer_phone, type, amount, note)
-       VALUES (?, 'credit', ?, ?)`,
+       VALUES ($1, 'credit', $2, $3)`,
       [phone, amount, note]
     );
 
@@ -392,16 +401,17 @@ router.post("/customer/:phone/wallet/cashback", async (req, res) => {
 ======================== */
 router.get("/:mess_id/stats/overview", async (req, res) => {
   try {
-    const [stats] = await db.query(
+    const result = await db.query(
       `SELECT 
         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_orders,
         SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders,
         SUM(CASE WHEN payment_status = 'paid' THEN total_amount ELSE 0 END) as total_revenue,
         COUNT(*) as total_orders
-       FROM orders WHERE mess_id = ? AND DATE(created_at) = DATE(NOW())`,
+       FROM orders WHERE mess_id = $1 AND DATE(created_at) = DATE(CURRENT_TIMESTAMP)`,
       [req.params.mess_id]
     );
+    const stats = result.rows;
 
     res.json(stats[0] || {});
   } catch (err) {
@@ -417,19 +427,21 @@ router.get("/:mess_id", async (req, res) => {
   try {
     const { status, limit = 50 } = req.query;
 
+    let paramIndex = 1;
     let query = `SELECT order_id, customer_name, customer_phone, total_amount, status, payment_method, payment_status, items, created_at 
-                 FROM orders WHERE mess_id = ?`;
+                 FROM orders WHERE mess_id = $${paramIndex++}`;
     const params = [req.params.mess_id];
 
     if (status) {
-      query += ` AND status = ?`;
+      query += ` AND status = $${paramIndex++}`;
       params.push(status);
     }
 
-    query += ` ORDER BY created_at DESC LIMIT ?`;
+    query += ` ORDER BY created_at DESC LIMIT $${paramIndex++}`;
     params.push(parseInt(limit));
 
-    const [rows] = await db.query(query, params);
+    const result = await db.query(query, params);
+    const rows = result.rows;
     res.json(rows);
   } catch (err) {
     console.error("Error fetching orders:", err);
@@ -453,29 +465,30 @@ router.delete("/:mess_id/all", async (req, res) => {
       return res.status(400).json({ error: "Owner verification is required" });
     }
 
-    const [ownerRows] = await db.query(
+    const result = await db.query(
       `SELECT 1
        FROM users
        WHERE role = 'owner'
-         AND mess_id = ?
-         AND (username = ? OR phone = ? OR email = ?)
+         AND mess_id = $1
+         AND (username = $2 OR phone = $2 OR email = $2)
        LIMIT 1`,
-      [messId, ownerContact, ownerContact, ownerContact]
+      [messId, ownerContact]
     );
+    const ownerRows = result.rows;
 
     if (ownerRows.length === 0) {
       return res.status(403).json({ error: "Unauthorized to delete orders for this mess" });
     }
 
-    const [result] = await db.query(
-      `DELETE FROM orders WHERE mess_id = ?`,
+    const deleteResult = await db.query(
+      `DELETE FROM orders WHERE mess_id = $1`,
       [messId]
     );
 
     res.json({
       message: "All orders deleted successfully",
       mess_id: messId,
-      deleted_count: result.affectedRows || 0
+      deleted_count: deleteResult.rowCount || 0
     });
   } catch (err) {
     console.error("Error deleting all orders:", err);
@@ -496,7 +509,8 @@ router.put("/:order_id/status", async (req, res) => {
     }
 
     // Verify mess ownership before updating
-    const [order] = await db.query(`SELECT mess_id FROM orders WHERE order_id = ?`, [req.params.order_id]);
+    const result = await db.query(`SELECT mess_id FROM orders WHERE order_id = $1`, [req.params.order_id]);
+    const order = result.rows;
     if (order.length === 0) {
       return res.status(404).json({ error: "Order not found" });
     }
@@ -506,12 +520,12 @@ router.put("/:order_id/status", async (req, res) => {
     }
 
     // Update status
-    const [result] = await db.query(
-      `UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE order_id = ?`,
+    const result2 = await db.query(
+      `UPDATE orders SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE order_id = $2`,
       [status, req.params.order_id]
     );
 
-    if (result.affectedRows === 0) {
+    if (result2.rowCount === 0) {
       return res.status(404).json({ error: "Order not found" });
     }
 
@@ -539,8 +553,9 @@ router.put("/:order_id/cancel", async (req, res) => {
       return res.status(400).json({ error: "Invalid phone number" });
     }
 
-    const [order] = await db.query(`SELECT status FROM orders WHERE order_id = ? AND customer_phone = ?`, 
+    const result = await db.query(`SELECT status FROM orders WHERE order_id = $1 AND customer_phone = $2`, 
       [req.params.order_id, customer_phone]);
+    const order = result.rows;
 
     if (order.length === 0) {
       return res.status(404).json({ error: "Order not found" });
@@ -550,7 +565,7 @@ router.put("/:order_id/cancel", async (req, res) => {
       return res.status(400).json({ error: `Cannot cancel order with status: ${order[0].status}` });
     }
 
-    await db.query(`UPDATE orders SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE order_id = ?`, 
+    await db.query(`UPDATE orders SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE order_id = $1`, 
       [req.params.order_id]);
 
     res.json({
@@ -580,10 +595,11 @@ router.post("/confirm-after-share/:order_id", async (req, res) => {
       return res.status(400).json({ error: "Invalid phone number" });
     }
 
-    const [orders] = await db.query(
-      `SELECT order_id, status FROM orders WHERE order_id = ? AND customer_phone = ?`,
+    const result = await db.query(
+      `SELECT order_id, status FROM orders WHERE order_id = $1 AND customer_phone = $2`,
       [order_id, customer_phone]
     );
+    const orders = result.rows;
 
     if (orders.length === 0) {
       return res.status(404).json({ error: "Order not found" });
@@ -606,7 +622,7 @@ router.post("/confirm-after-share/:order_id", async (req, res) => {
     }
 
     await db.query(
-      `UPDATE orders SET status = 'confirmed', updated_at = CURRENT_TIMESTAMP WHERE order_id = ?`,
+      `UPDATE orders SET status = 'confirmed', updated_at = CURRENT_TIMESTAMP WHERE order_id = $1`,
       [order_id]
     );
 

@@ -46,32 +46,33 @@ function buildContactPayload(contactType, value) {
 
 async function findExistingUser(connection, contactType, identifier) {
   const column = contactType === "phone" ? "phone" : "email";
-  const [rows] = await connection.query(
-    `SELECT user_id, role FROM users WHERE ${column} = ? LIMIT 1`,
+  const result = await connection.query(
+    `SELECT user_id, role FROM users WHERE ${column} = $1 LIMIT 1`,
     [identifier]
   );
-
+  const rows = result.rows;
   return rows[0] || null;
 }
 
 async function getUserByContact(connection, contactType, identifier) {
   const column = contactType === "phone" ? "phone" : "email";
-  const [rows] = await connection.query(
-    `SELECT user_id, username, role, phone, email FROM users WHERE ${column} = ? LIMIT 1`,
+  const result = await connection.query(
+    `SELECT user_id, username, role, phone, email FROM users WHERE ${column} = $1 LIMIT 1`,
     [identifier]
   );
+  const rows = result.rows;
   return rows[0] || null;
 }
 
 async function getUserByUsername(connection, username) {
-  const [rows] = await connection.query(
+  const result = await connection.query(
     `SELECT user_id, username, role, phone, email
      FROM users
-     WHERE username = ?
+     WHERE username = $1
      LIMIT 1`,
     [String(username || "").trim()]
   );
-
+  const rows = result.rows;
   return rows[0] || null;
 }
 
@@ -79,10 +80,11 @@ router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    const [rows] = await db.query(
-      "SELECT * FROM users WHERE username = ? AND password = ?",
+    const result = await db.query(
+      "SELECT * FROM users WHERE username = $1 AND password = $2",
       [username, password]
     );
+    const rows = result.rows;
 
     if (rows.length === 0) {
       return res.status(401).json({
@@ -142,13 +144,13 @@ router.post("/request-signup-otp", async (req, res) => {
     await db.query(
       `UPDATE visitor_otps
        SET consumed_at = CURRENT_TIMESTAMP
-       WHERE identifier = ? AND contact_type = ? AND consumed_at IS NULL`,
+       WHERE identifier = $1 AND contact_type = $2 AND consumed_at IS NULL`,
       [identifier, contactType]
     );
 
     await db.query(
       `INSERT INTO visitor_otps (full_name, identifier, contact_type, otp_code, expires_at)
-       VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
+       VALUES ($1, $2, $3, $4, NOW() + INTERVAL '1 minute' * $5)`,
       [fullName.trim(), identifier, contactType, otpCode, OTP_EXPIRY_MINUTES]
     );
 
@@ -203,12 +205,12 @@ router.post("/verify-signup-otp", async (req, res) => {
       });
     }
 
-    const [otpRows] = await db.query(
+    const result = await db.query(
       `SELECT otp_id
        FROM visitor_otps
-       WHERE identifier = ?
-         AND contact_type = ?
-         AND otp_code = ?
+       WHERE identifier = $1
+         AND contact_type = $2
+         AND otp_code = $3
          AND consumed_at IS NULL
          AND expires_at >= NOW()
        ORDER BY created_at DESC
@@ -216,6 +218,7 @@ router.post("/verify-signup-otp", async (req, res) => {
        FOR UPDATE`,
       [identifier, contactType, normalizedOtp]
     );
+    const otpRows = result.rows;
 
     if (otpRows.length === 0) {
       return res.status(400).json({ error: "Invalid or expired OTP." });
@@ -287,10 +290,11 @@ router.post("/complete-signup", async (req, res) => {
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    const [usernameRows] = await connection.query(
-      `SELECT 1 FROM users WHERE username = ? LIMIT 1`,
+    const result = await connection.query(
+      `SELECT 1 FROM users WHERE username = $1 LIMIT 1`,
       [normalizedUsername]
     );
+    const usernameRows = result.rows;
 
     if (usernameRows.length > 0) {
       await connection.rollback();
@@ -303,12 +307,12 @@ router.post("/complete-signup", async (req, res) => {
       return res.status(409).json({ error: `An account already exists for this ${contactType}.` });
     }
 
-    const [otpRows] = await connection.query(
+    const otpResult = await connection.query(
       `SELECT otp_id
        FROM visitor_otps
-       WHERE identifier = ?
-         AND contact_type = ?
-         AND otp_code = ?
+       WHERE identifier = $1
+         AND contact_type = $2
+         AND otp_code = $3
          AND consumed_at IS NULL
          AND expires_at >= NOW()
        ORDER BY created_at DESC
@@ -316,23 +320,26 @@ router.post("/complete-signup", async (req, res) => {
        FOR UPDATE`,
       [identifier, contactType, normalizedOtp]
     );
+    const otpRows = otpResult.rows;
 
     if (otpRows.length === 0) {
       await connection.rollback();
       return res.status(400).json({ error: "Invalid or expired OTP." });
     }
 
-    const [insertResult] = await connection.query(
+    const insertResult = await connection.query(
       `INSERT INTO users (username, password, phone, email, role)
-       VALUES (?, ?, ?, ?, 'visitor')`,
+       VALUES ($1, $2, $3, $4, 'visitor')
+       RETURNING user_id`,
       [normalizedUsername, password, phone, email]
     );
+    const insertResultRows = insertResult.rows;
 
     if (phone) {
       await connection.query(
         `INSERT INTO customers (phone, name, email)
-         VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE name = VALUES(name), email = VALUES(email)`,
+         VALUES ($1, $2, $3)
+         ON CONFLICT (phone) DO UPDATE SET name = $2, email = $3`,
         [phone, fullName.trim(), email]
       );
     }
@@ -340,7 +347,7 @@ router.post("/complete-signup", async (req, res) => {
     await connection.query(
       `UPDATE visitor_otps
        SET consumed_at = CURRENT_TIMESTAMP
-       WHERE otp_id = ?`,
+       WHERE otp_id = $1`,
       [otpRows[0].otp_id]
     );
 
@@ -349,7 +356,7 @@ router.post("/complete-signup", async (req, res) => {
     res.json({
       message: "Account created successfully.",
       account: {
-        user_id: insertResult.insertId,
+        user_id: insertResultRows[0].user_id,
         role: "visitor",
         name: fullName.trim(),
         phone,
@@ -403,13 +410,13 @@ router.post("/request-password-reset-otp", async (req, res) => {
     await db.query(
       `UPDATE password_reset_otps
        SET consumed_at = CURRENT_TIMESTAMP
-       WHERE identifier = ? AND contact_type = ? AND consumed_at IS NULL`,
+       WHERE identifier = $1 AND contact_type = $2 AND consumed_at IS NULL`,
       [identifier, contactType]
     );
 
     await db.query(
       `INSERT INTO password_reset_otps (user_id, identifier, contact_type, otp_code, expires_at)
-       VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
+       VALUES ($1, $2, $3, $4, NOW() + INTERVAL '1 minute' * $5)`,
       [user.user_id, identifier, contactType, otpCode, OTP_EXPIRY_MINUTES]
     );
 
@@ -466,13 +473,13 @@ router.post("/request-password-reset-by-username", async (req, res) => {
     await db.query(
       `UPDATE password_reset_otps
        SET consumed_at = CURRENT_TIMESTAMP
-       WHERE user_id = ? AND consumed_at IS NULL`,
+       WHERE user_id = $1 AND consumed_at IS NULL`,
       [user.user_id]
     );
 
     await db.query(
       `INSERT INTO password_reset_otps (user_id, identifier, contact_type, otp_code, expires_at)
-       VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE))`,
+       VALUES ($1, $2, $3, $4, NOW() + INTERVAL '1 minute' * $5)`,
       [user.user_id, identifier, contactType, otpCode, OTP_EXPIRY_MINUTES]
     );
 
@@ -512,17 +519,18 @@ router.post("/verify-password-reset-by-username", async (req, res) => {
       return res.status(404).json({ error: "No account found for this username." });
     }
 
-    const [otpRows] = await db.query(
+    const result = await db.query(
       `SELECT reset_otp_id
        FROM password_reset_otps
-       WHERE user_id = ?
-         AND otp_code = ?
+       WHERE user_id = $1
+         AND otp_code = $2
          AND consumed_at IS NULL
          AND expires_at >= NOW()
        ORDER BY created_at DESC
        LIMIT 1`,
       [user.user_id, normalizedOtp]
     );
+    const otpRows = result.rows;
 
     if (otpRows.length === 0) {
       return res.status(400).json({ error: "Invalid or expired OTP." });
@@ -574,11 +582,11 @@ router.post("/reset-password-by-username", async (req, res) => {
       return res.status(404).json({ error: "No account found for this username." });
     }
 
-    const [otpRows] = await connection.query(
+    const result = await connection.query(
       `SELECT reset_otp_id
        FROM password_reset_otps
-       WHERE user_id = ?
-         AND otp_code = ?
+       WHERE user_id = $1
+         AND otp_code = $2
          AND consumed_at IS NULL
          AND expires_at >= NOW()
        ORDER BY created_at DESC
@@ -586,6 +594,7 @@ router.post("/reset-password-by-username", async (req, res) => {
        FOR UPDATE`,
       [user.user_id, normalizedOtp]
     );
+    const otpRows = result.rows;
 
     if (otpRows.length === 0) {
       await connection.rollback();
@@ -594,15 +603,15 @@ router.post("/reset-password-by-username", async (req, res) => {
 
     await connection.query(
       `UPDATE users
-       SET password = ?
-       WHERE user_id = ?`,
+       SET password = $1
+       WHERE user_id = $2`,
       [newPassword, user.user_id]
     );
 
     await connection.query(
       `UPDATE password_reset_otps
        SET consumed_at = CURRENT_TIMESTAMP
-       WHERE reset_otp_id = ?`,
+       WHERE reset_otp_id = $1`,
       [otpRows[0].reset_otp_id]
     );
 
@@ -649,18 +658,19 @@ router.post("/verify-password-reset-otp", async (req, res) => {
       return res.status(400).json({ error: "Please enter a valid email address." });
     }
 
-    const [otpRows] = await db.query(
+    const result = await db.query(
       `SELECT reset_otp_id
        FROM password_reset_otps
-       WHERE identifier = ?
-         AND contact_type = ?
-         AND otp_code = ?
+       WHERE identifier = $1
+         AND contact_type = $2
+         AND otp_code = $3
          AND consumed_at IS NULL
          AND expires_at >= NOW()
        ORDER BY created_at DESC
        LIMIT 1`,
       [identifier, contactType, normalizedOtp]
     );
+    const otpRows = result.rows;
 
     if (otpRows.length === 0) {
       return res.status(400).json({ error: "Invalid or expired OTP." });
@@ -715,12 +725,12 @@ router.post("/reset-password", async (req, res) => {
     connection = await db.getConnection();
     await connection.beginTransaction();
 
-    const [otpRows] = await connection.query(
+    const result = await connection.query(
       `SELECT reset_otp_id, user_id
        FROM password_reset_otps
-       WHERE identifier = ?
-         AND contact_type = ?
-         AND otp_code = ?
+       WHERE identifier = $1
+         AND contact_type = $2
+         AND otp_code = $3
          AND consumed_at IS NULL
          AND expires_at >= NOW()
        ORDER BY created_at DESC
@@ -728,6 +738,7 @@ router.post("/reset-password", async (req, res) => {
        FOR UPDATE`,
       [identifier, contactType, normalizedOtp]
     );
+    const otpRows = result.rows;
 
     if (otpRows.length === 0) {
       await connection.rollback();
@@ -736,15 +747,15 @@ router.post("/reset-password", async (req, res) => {
 
     await connection.query(
       `UPDATE users
-       SET password = ?
-       WHERE user_id = ?`,
+       SET password = $1
+       WHERE user_id = $2`,
       [newPassword, otpRows[0].user_id]
     );
 
     await connection.query(
       `UPDATE password_reset_otps
        SET consumed_at = CURRENT_TIMESTAMP
-       WHERE reset_otp_id = ?`,
+       WHERE reset_otp_id = $1`,
       [otpRows[0].reset_otp_id]
     );
 

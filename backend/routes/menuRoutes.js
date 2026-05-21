@@ -8,10 +8,11 @@ router.get("/:mess_id", async (req, res) => {
   try {
     const includeUnavailable = req.query.include_unavailable === "1";
     const query = includeUnavailable
-      ? "SELECT * FROM menu_items WHERE mess_id=? ORDER BY category"
-      : "SELECT * FROM menu_items WHERE mess_id=? AND is_available=1 ORDER BY category";
+      ? "SELECT * FROM menu_items WHERE mess_id=$1 ORDER BY category"
+      : "SELECT * FROM menu_items WHERE mess_id=$1 AND is_available=1 ORDER BY category";
 
-    const [rows] = await db.query(query, [req.params.mess_id]);
+    const result = await db.query(query, [req.params.mess_id]);
+    const rows = result.rows;
     res.json(rows);
   } catch (err) {
     console.error(err);
@@ -26,7 +27,7 @@ router.post("/:mess_id", async (req, res) => {
   try {
     const { item_name, item_price, category } = req.body;
     await db.query(
-      "INSERT INTO menu_items (mess_id, item_name, item_price, category) VALUES (?,?,?,?)",
+      "INSERT INTO menu_items (mess_id, item_name, item_price, category) VALUES ($1,$2,$3,$4)",
       [req.params.mess_id, item_name, item_price, category]
     );
     res.json({ message: "Item added successfully" });
@@ -42,7 +43,7 @@ router.post("/:mess_id", async (req, res) => {
 router.delete("/item/:item_id", async (req, res) => {
   try {
     await db.query(
-      "DELETE FROM menu_items WHERE item_id=?",
+      "DELETE FROM menu_items WHERE item_id=$1",
       [req.params.item_id]
     );
     res.json({ message: "Item deleted successfully" });
@@ -59,7 +60,7 @@ router.put("/item/:item_id", async (req, res) => {
   try {
     const { is_available } = req.body;
     await db.query(
-      "UPDATE menu_items SET is_available=? WHERE item_id=?",
+      "UPDATE menu_items SET is_available=$1 WHERE item_id=$2",
       [is_available, req.params.item_id]
     );
     res.json({ message: "Item updated successfully" });
