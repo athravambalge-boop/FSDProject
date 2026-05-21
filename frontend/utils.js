@@ -175,7 +175,8 @@ const API_ORIGIN = (() => {
         return 'http://localhost:5000';
     }
 
-    return window.location.origin.replace(/\/+$/, '');
+    // In production deployment, use production backend
+    return 'https://pccoe-campus-bites.onrender.com';
 })();
 
 const IS_PLACEHOLDER_API = API_ORIGIN.includes('your-backend-domain.com');
