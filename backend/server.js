@@ -22,7 +22,7 @@ function buildAllowedOrigins() {
       "http://localhost:3000",
       "http://127.0.0.1:3000",
       "https://athravambalge-boop.github.io",
-      "https://pccoe-campus-bites.onrender.com"
+      "https://pccoe-campus-bite.onrender.com"
    ];
 
    const extra = (process.env.ALLOWED_ORIGINS || "")
