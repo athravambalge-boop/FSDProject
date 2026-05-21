@@ -166,7 +166,7 @@ const API_ORIGIN = (() => {
         const cleaned = String(override).replace(/\/+$/, '');
         // Prevent deployed frontend from being pinned to localhost by mistake.
         if (!IS_LOCAL_HOST && isLoopbackOrigin(cleaned)) {
-            return 'https://your-backend-domain.com';
+            return 'https://pccoe-campus-bites.onrender.com';
         }
         return cleaned;
     }
