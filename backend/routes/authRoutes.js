@@ -905,25 +905,36 @@ router.post("/google-login", async (req, res) => {
     const googleName = decoded.name || decoded.email.split('@')[0];
 
     // Find or create user by email
-    const result = await db.query(
-      `SELECT * FROM users WHERE email = $1 LIMIT 1`,
-      [googleEmail]
-    );
-    const rows = result.rows;
+    let result;
+    try {
+      result = await db.query(
+        `SELECT id, username, email, password, role, phone, mess_id FROM users WHERE email = $1 LIMIT 1`,
+        [googleEmail]
+      );
+    } catch (dbErr) {
+      console.error("Database query error (select):", dbErr.message, dbErr.code);
+      return res.status(500).json({ error: "Database error during user lookup.", details: dbErr.message });
+    }
 
+    const rows = result.rows;
     let user = rows[0];
 
     if (!user) {
       // Create new user from Google account
       const googleUsername = decoded.email.split('@')[0] + Math.random().toString(36).substr(2, 5);
       
-      const insertResult = await db.query(
-        `INSERT INTO users (username, email, password, role, phone)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING *`,
-        [googleUsername, googleEmail, crypto.randomBytes(16).toString('hex'), 'visitor', null]
-      );
-      user = insertResult.rows[0];
+      try {
+        const insertResult = await db.query(
+          `INSERT INTO users (username, email, password, role, phone)
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING id, username, email, password, role, phone, mess_id`,
+          [googleUsername, googleEmail, crypto.randomBytes(16).toString('hex'), 'visitor', null]
+        );
+        user = insertResult.rows[0];
+      } catch (insertErr) {
+        console.error("Database insert error:", insertErr.message, insertErr.code);
+        return res.status(500).json({ error: "Failed to create user.", details: insertErr.message });
+      }
     }
 
     res.json({
@@ -937,7 +948,7 @@ router.post("/google-login", async (req, res) => {
       contact: user.phone || user.email || user.username
     });
   } catch (err) {
-    console.error("Google login error:", err.message);
+    console.error("Google login error:", err.message, err.stack);
     res.status(500).json({ error: "Google login failed.", details: err.message });
   }
 });
@@ -961,10 +972,16 @@ router.post("/google-signup", async (req, res) => {
     const googleName = decoded.name || decoded.email.split('@')[0];
 
     // Check if user already exists
-    const existingResult = await db.query(
-      `SELECT user_id FROM users WHERE email = $1 LIMIT 1`,
-      [googleEmail]
-    );
+    let existingResult;
+    try {
+      existingResult = await db.query(
+        `SELECT id, username, email FROM users WHERE email = $1 LIMIT 1`,
+        [googleEmail]
+      );
+    } catch (dbErr) {
+      console.error("Database query error (select existing):", dbErr.message, dbErr.code);
+      return res.status(500).json({ error: "Database error during duplicate check.", details: dbErr.message });
+    }
 
     if (existingResult.rows.length > 0) {
       return res.status(409).json({
@@ -975,12 +992,18 @@ router.post("/google-signup", async (req, res) => {
     // Create new user
     const googleUsername = googleEmail.split('@')[0] + Math.random().toString(36).substr(2, 5);
     
-    const insertResult = await db.query(
-      `INSERT INTO users (username, email, password, role, phone)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [googleUsername, googleEmail, crypto.randomBytes(16).toString('hex'), 'visitor', null]
-    );
+    let insertResult;
+    try {
+      insertResult = await db.query(
+        `INSERT INTO users (username, email, password, role, phone)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, username, email, password, role, phone, mess_id`,
+        [googleUsername, googleEmail, crypto.randomBytes(16).toString('hex'), 'visitor', null]
+      );
+    } catch (insertErr) {
+      console.error("Database insert error:", insertErr.message, insertErr.code);
+      return res.status(500).json({ error: "Failed to create account.", details: insertErr.message });
+    }
 
     const user = insertResult.rows[0];
 
@@ -989,10 +1012,13 @@ router.post("/google-signup", async (req, res) => {
       role: user.role,
       name: googleName,
       email: user.email,
-      username: user.username
+      username: user.username,
+      mess_id: user.mess_id || null,
+      phone: user.phone || null,
+      contact: user.phone || user.email || user.username
     });
   } catch (err) {
-    console.error("Google signup error:", err.message);
+    console.error("Google signup error:", err.message, err.stack);
     res.status(500).json({ error: "Google signup failed.", details: err.message });
   }
 });
