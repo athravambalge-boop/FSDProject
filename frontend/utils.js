@@ -184,6 +184,23 @@ const NEEDS_BACKEND_CONFIG = !IS_LOCAL_HOST && (IS_PLACEHOLDER_API || isLoopback
 
 const API_BASE = `${API_ORIGIN}/api`;
 
+// Google OAuth Client ID - Set this from environment or use placeholder
+const GOOGLE_CLIENT_ID = (() => {
+    // Try to get from window object first (for custom override)
+    if (window.GOOGLE_CLIENT_ID) {
+        return window.GOOGLE_CLIENT_ID;
+    }
+    
+    // Try to get from localStorage
+    const stored = localStorage.getItem('google_client_id');
+    if (stored) {
+        return stored;
+    }
+    
+    // Placeholder - user should set this via localStorage or window
+    return '';
+})();
+
 function apiUrl(path = '') {
     const cleanPath = String(path).replace(/^\/+/, '');
     return cleanPath ? `${API_BASE}/${cleanPath}` : API_BASE;

@@ -89,14 +89,94 @@ async function signupWithEmail() {
     }
 }
 
-function loginWithGoogle() {
-    // Google OAuth will be implemented
-    showToast('Google login integration coming soon.', 'info');
+function signupWithGoogle() {
+    if (!GOOGLE_CLIENT_ID) {
+        showToast('Google Client ID not configured. Please set it up.', 'error');
+        return;
+    }
+    
+    // Initialize Google Sign-In
+    if (window.google && google.accounts && google.accounts.id) {
+        google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleSignup
+        });
+        
+        // Prompt user to sign in
+        google.accounts.id.prompt((notification) => {
+            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                // If prompt isn't displayed, show fallback
+                showGoogleSignUpButton('googleSignupBtn');
+            }
+        });
+    }
 }
 
-function signupWithGoogle() {
-    // Google OAuth will be implemented
-    showToast('Google signup integration coming soon.', 'info');
+function showGoogleSignUpButton(elementId) {
+    if (window.google && google.accounts && google.accounts.id) {
+        google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleSignup
+        });
+        
+        google.accounts.id.renderButton(
+            document.getElementById(elementId),
+            { theme: 'outline', size: 'large' }
+        );
+    }
+}
+
+async function handleGoogleSignup(response) {
+    try {
+        showLoading();
+        
+        const res = await fetch(apiUrl('auth/google-signup'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                token: response.credential
+            })
+        });
+
+        hideLoading();
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            const errorMsg = err.error || 'Google signup failed.';
+            showError(errorMsg);
+            showToast(errorMsg, 'error');
+            return;
+        }
+
+        const data = await res.json();
+
+        // Save session
+        saveUserSession(
+            'visitor',
+            null,
+            null,
+            data.name || data.email,
+            data.email || null,
+            data.email || data.name
+        );
+
+        localStorage.setItem('auth_token', data.token || '');
+        localStorage.setItem('loginTime', new Date().toISOString());
+
+        showToast('Account created successfully with Google!', 'success');
+        
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 800);
+
+    } catch (error) {
+        console.error('Google signup error:', error);
+        hideLoading();
+        showError('Google signup failed. Try again.');
+        showToast('Google signup failed.', 'error');
+    }
 }
 
 function continueWithSavedAccount() {
@@ -143,4 +223,11 @@ document.addEventListener('DOMContentLoaded', () => {
             signupWithEmail();
         }
     });
+
+    // Initialize Google Sign-In button
+    if (GOOGLE_CLIENT_ID && window.google) {
+        setTimeout(() => {
+            showGoogleSignUpButton('googleSignupBtn');
+        }, 1000);
+    }
 });

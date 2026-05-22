@@ -136,8 +136,100 @@ async function login() {
 }
 
 function loginWithGoogle() {
-    // Google OAuth will be implemented
-    showToast('Google login integration coming soon.', 'info');
+    if (!GOOGLE_CLIENT_ID) {
+        showToast('Google Client ID not configured. Please set it up.', 'error');
+        return;
+    }
+    
+    // Initialize Google Sign-In
+    if (window.google && google.accounts && google.accounts.id) {
+        google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleLogin
+        });
+        
+        // Prompt user to sign in
+        google.accounts.id.prompt((notification) => {
+            if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                // If prompt isn't displayed, show fallback
+                showGoogleSignInButton('googleLoginBtn');
+            }
+        });
+    }
+}
+
+function showGoogleSignInButton(elementId) {
+    if (window.google && google.accounts && google.accounts.id) {
+        google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleLogin
+        });
+        
+        google.accounts.id.renderButton(
+            document.getElementById(elementId),
+            { theme: 'outline', size: 'large' }
+        );
+    }
+}
+
+async function handleGoogleLogin(response) {
+    try {
+        showLoading();
+        
+        const res = await fetch(apiUrl('auth/google-login'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                token: response.credential
+            })
+        });
+
+        hideLoading();
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            const errorMsg = err.error || 'Google login failed.';
+            showToast(errorMsg, 'error');
+            return;
+        }
+
+        const data = await res.json();
+
+        // Save session
+        saveUserSession(
+            data.role,
+            data.mess_id || null,
+            data.phone || null,
+            data.name || data.email,
+            data.email || null,
+            data.email || data.phone || data.name
+        );
+
+        localStorage.setItem('auth_token', data.token || '');
+        localStorage.setItem('loginTime', new Date().toISOString());
+
+        showToast(`Welcome ${data.name || data.email}!`, 'success');
+
+        setTimeout(() => {
+            switch (data.role) {
+                case 'owner':
+                    window.location.href = 'owner.html';
+                    break;
+                case 'admin':
+                    window.location.href = 'admin.html';
+                    break;
+                default:
+                    window.location.href = 'index.html';
+            }
+        }, 800);
+
+    } catch (error) {
+        console.error('Google login error:', error);
+        hideLoading();
+        showToast('Google login failed. Try again.', 'error');
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -157,4 +249,11 @@ document.addEventListener('DOMContentLoaded', () => {
             login();
         }
     });
+
+    // Initialize Google Sign-In button
+    if (GOOGLE_CLIENT_ID && window.google) {
+        setTimeout(() => {
+            showGoogleSignInButton('googleLoginBtn');
+        }, 1000);
+    }
 });

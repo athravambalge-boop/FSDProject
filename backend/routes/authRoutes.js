@@ -863,4 +863,132 @@ router.post("/reset-password", async (req, res) => {
   }
 });
 
+
+/* ===========================
+   GOOGLE OAUTH ENDPOINTS
+=========================== */
+
+function decodeGoogleToken(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    
+    const decoded = Buffer.from(parts[1], 'base64').toString('utf-8');
+    return JSON.parse(decoded);
+  } catch (error) {
+    console.error("Token decode error:", error);
+    return null;
+  }
+}
+
+router.post("/google-login", async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: "Google token is required." });
+    }
+
+    // Decode and verify Google token
+    const decoded = decodeGoogleToken(token);
+    if (!decoded || !decoded.email) {
+      return res.status(401).json({ error: "Invalid Google token." });
+    }
+
+    const googleEmail = normalizeEmail(decoded.email);
+    const googleName = decoded.name || decoded.email.split('@')[0];
+
+    // Find or create user by email
+    const result = await db.query(
+      `SELECT * FROM users WHERE email = $1 LIMIT 1`,
+      [googleEmail]
+    );
+    const rows = result.rows;
+
+    let user = rows[0];
+
+    if (!user) {
+      // Create new user from Google account
+      const googleUsername = decoded.email.split('@')[0] + Math.random().toString(36).substr(2, 5);
+      
+      const insertResult = await db.query(
+        `INSERT INTO users (username, email, password, role, phone)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING *`,
+        [googleUsername, googleEmail, crypto.randomBytes(16).toString('hex'), 'visitor', null]
+      );
+      user = insertResult.rows[0];
+    }
+
+    res.json({
+      message: "Google login successful",
+      role: user.role,
+      mess_id: user.mess_id || null,
+      name: googleName,
+      email: user.email,
+      phone: user.phone || null,
+      username: user.username,
+      contact: user.phone || user.email || user.username
+    });
+  } catch (err) {
+    console.error("Google login error:", err.message);
+    res.status(500).json({ error: "Google login failed.", details: err.message });
+  }
+});
+
+
+router.post("/google-signup", async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: "Google token is required." });
+    }
+
+    // Decode and verify Google token
+    const decoded = decodeGoogleToken(token);
+    if (!decoded || !decoded.email) {
+      return res.status(401).json({ error: "Invalid Google token." });
+    }
+
+    const googleEmail = normalizeEmail(decoded.email);
+    const googleName = decoded.name || decoded.email.split('@')[0];
+
+    // Check if user already exists
+    const existingResult = await db.query(
+      `SELECT user_id FROM users WHERE email = $1 LIMIT 1`,
+      [googleEmail]
+    );
+
+    if (existingResult.rows.length > 0) {
+      return res.status(409).json({
+        error: "An account with this email already exists. Please login instead."
+      });
+    }
+
+    // Create new user
+    const googleUsername = googleEmail.split('@')[0] + Math.random().toString(36).substr(2, 5);
+    
+    const insertResult = await db.query(
+      `INSERT INTO users (username, email, password, role, phone)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [googleUsername, googleEmail, crypto.randomBytes(16).toString('hex'), 'visitor', null]
+    );
+
+    const user = insertResult.rows[0];
+
+    res.status(201).json({
+      message: "Account created with Google successfully.",
+      role: user.role,
+      name: googleName,
+      email: user.email,
+      username: user.username
+    });
+  } catch (err) {
+    console.error("Google signup error:", err.message);
+    res.status(500).json({ error: "Google signup failed.", details: err.message });
+  }
+});
+
 module.exports = router;
