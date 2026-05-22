@@ -251,9 +251,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Initialize Google Sign-In button
-    if (GOOGLE_CLIENT_ID && window.google) {
+    if (window.google && window.google.accounts && window.google.accounts.id) {
         setTimeout(() => {
-            showGoogleSignInButton('googleLoginBtn');
-        }, 1000);
+            if (GOOGLE_CLIENT_ID) {
+                showGoogleSignInButton('googleLoginBtn');
+            }
+        }, 1500);
     }
 });

@@ -46,6 +46,7 @@ window.applyThemePreference = applyThemePreference;
 window.initializeThemePreference = initializeThemePreference;
 
 document.addEventListener('DOMContentLoaded', initializeThemePreference);
+document.addEventListener('DOMContentLoaded', loadGoogleClientId);
 
 window.addEventListener('storage', (event) => {
     if (event.key === THEME_STORAGE_KEY) {
@@ -184,8 +185,8 @@ const NEEDS_BACKEND_CONFIG = !IS_LOCAL_HOST && (IS_PLACEHOLDER_API || isLoopback
 
 const API_BASE = `${API_ORIGIN}/api`;
 
-// Google OAuth Client ID - Set this from environment or use placeholder
-const GOOGLE_CLIENT_ID = (() => {
+// Google OAuth Client ID - Will be fetched from backend
+let GOOGLE_CLIENT_ID = (() => {
     // Try to get from window object first (for custom override)
     if (window.GOOGLE_CLIENT_ID) {
         return window.GOOGLE_CLIENT_ID;
@@ -197,9 +198,25 @@ const GOOGLE_CLIENT_ID = (() => {
         return stored;
     }
     
-    // Placeholder - user should set this via localStorage or window
+    // Will be fetched from backend config
     return '';
 })();
+
+// Fetch Google Client ID from backend
+async function loadGoogleClientId() {
+    try {
+        const response = await fetch(apiUrl('auth/config'));
+        if (response.ok) {
+            const data = await response.json();
+            if (data.google_client_id) {
+                GOOGLE_CLIENT_ID = data.google_client_id;
+                localStorage.setItem('google_client_id', data.google_client_id);
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load Google Client ID:', error);
+    }
+}
 
 function apiUrl(path = '') {
     const cleanPath = String(path).replace(/^\/+/, '');

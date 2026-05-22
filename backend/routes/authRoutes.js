@@ -76,6 +76,12 @@ async function getUserByUsername(connection, username) {
   return rows[0] || null;
 }
 
+router.get("/config", (req, res) => {
+  res.json({
+    google_client_id: process.env.GOOGLE_CLIENT_ID || ""
+  });
+});
+
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
