@@ -908,7 +908,7 @@ router.post("/google-login", async (req, res) => {
     let result;
     try {
       result = await db.query(
-        `SELECT id, username, email, password, role, phone, mess_id FROM users WHERE email = $1 LIMIT 1`,
+        `SELECT user_id, username, email, password, role, phone, mess_id FROM users WHERE email = $1 LIMIT 1`,
         [googleEmail]
       );
     } catch (dbErr) {
@@ -927,7 +927,7 @@ router.post("/google-login", async (req, res) => {
         const insertResult = await db.query(
           `INSERT INTO users (username, email, password, role, phone)
            VALUES ($1, $2, $3, $4, $5)
-           RETURNING id, username, email, password, role, phone, mess_id`,
+           RETURNING user_id, username, email, password, role, phone, mess_id`,
           [googleUsername, googleEmail, crypto.randomBytes(16).toString('hex'), 'visitor', null]
         );
         user = insertResult.rows[0];
@@ -975,7 +975,7 @@ router.post("/google-signup", async (req, res) => {
     let existingResult;
     try {
       existingResult = await db.query(
-        `SELECT id, username, email FROM users WHERE email = $1 LIMIT 1`,
+        `SELECT user_id, username, email FROM users WHERE email = $1 LIMIT 1`,
         [googleEmail]
       );
     } catch (dbErr) {
@@ -997,7 +997,7 @@ router.post("/google-signup", async (req, res) => {
       insertResult = await db.query(
         `INSERT INTO users (username, email, password, role, phone)
          VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, username, email, password, role, phone, mess_id`,
+         RETURNING user_id, username, email, password, role, phone, mess_id`,
         [googleUsername, googleEmail, crypto.randomBytes(16).toString('hex'), 'visitor', null]
       );
     } catch (insertErr) {
