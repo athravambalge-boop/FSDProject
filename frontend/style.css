@@ -331,6 +331,52 @@ button:active {
 }
 
 /* ========================
+   OAUTH & GOOGLE BUTTON
+======================== */
+
+.oauth-divider {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 13px;
+    margin: 8px 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.oauth-divider::before,
+.oauth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+}
+
+.google-btn {
+    background: white;
+    color: #2c3e50;
+    border: 2px solid #ecf0f1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 2px 8px rgba(20, 48, 38, 0.1);
+    font-weight: 600;
+}
+
+.google-btn:hover {
+    border-color: var(--brand);
+    background: #f8fbf8;
+    box-shadow: 0 4px 12px rgba(15, 124, 108, 0.2);
+}
+
+.google-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* ========================
    DASHBOARD
 ======================== */
 

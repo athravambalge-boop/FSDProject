@@ -11,17 +11,26 @@
     
     <div class="login-container">
         <h2>Login</h2>
-        <p class="auth-subtitle">Use your username and password for owner access.</p>
+        <p class="auth-subtitle">Sign in with your credentials or use Google.</p>
         <p id="error"></p>
-        <input type="text" id="username" placeholder="Username" required>
+        <input type="text" id="username" placeholder="Username or Email" required>
         <input type="password" id="password" placeholder="Password" required>
         <button onclick="login()">Login</button>
-        <p class="auth-footer-link">
+        <p class="auth-footer-link" style="text-align: center;">
             <a href="forgot-password.html">Forgot password?</a>
         </p>
 
+        <div class="oauth-divider">OR</div>
+
+        <button id="googleLoginBtn" onclick="loginWithGoogle()" class="google-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+            Continue with Google
+        </button>
+
         <p class="auth-footer-link">
-            New student visitor? <a href="create-account.html">Create your account with OTP</a>
+            New to Campus Bites? <a href="create-account.html">Create your account</a>
         </p>
     </div>
 

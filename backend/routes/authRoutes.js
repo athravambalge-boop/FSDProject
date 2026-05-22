@@ -110,6 +110,81 @@ router.post("/login", async (req, res) => {
 });
 
 
+router.post("/register", async (req, res) => {
+  try {
+    const { username, email, password, role } = req.body;
+
+    // Validation
+    if (!validateUsername(username)) {
+      return res.status(400).json({
+        error: "Invalid username. Must be 3-30 characters with letters, numbers, or underscore."
+      });
+    }
+
+    if (!validateEmail(email)) {
+      return res.status(400).json({
+        error: "Invalid email address."
+      });
+    }
+
+    if (!validatePassword(password)) {
+      return res.status(400).json({
+        error: "Password must be between 6 and 100 characters."
+      });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+
+    // Check if email already exists
+    const existingResult = await db.query(
+      `SELECT user_id FROM users WHERE email = $1 LIMIT 1`,
+      [normalizedEmail]
+    );
+
+    if (existingResult.rows.length > 0) {
+      return res.status(409).json({
+        error: "An account with this email already exists."
+      });
+    }
+
+    // Check if username already exists
+    const usernameResult = await db.query(
+      `SELECT user_id FROM users WHERE username = $1 LIMIT 1`,
+      [username.trim()]
+    );
+
+    if (usernameResult.rows.length > 0) {
+      return res.status(409).json({
+        error: "Username already taken. Please choose another one."
+      });
+    }
+
+    // Create new user
+    const insertResult = await db.query(
+      `INSERT INTO users (username, password, email, role)
+       VALUES ($1, $2, $3, $4)
+       RETURNING user_id, username, email, role`,
+      [username.trim(), password, normalizedEmail, role || "visitor"]
+    );
+
+    const user = insertResult.rows[0];
+
+    res.status(201).json({
+      message: "Account created successfully.",
+      user: {
+        user_id: user.user_id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    console.error("Registration error:", err.message);
+    res.status(500).json({ error: "Failed to create account.", details: err.message });
+  }
+});
+
+
 router.post("/request-signup-otp", async (req, res) => {
   try {
     const { fullName, contactType, contactValue } = req.body;

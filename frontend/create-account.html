@@ -17,38 +17,23 @@
 
     <div class="login-container">
         <h2>Create Account</h2>
-        <p class="auth-subtitle">Create a visitor account with a one-time password sent to your phone number or email.</p>
+        <p class="auth-subtitle">Sign up with your email and password or use Google.</p>
         <p id="error"></p>
 
-        <input type="text" id="fullName" placeholder="Full name" required>
+        <input type="email" id="signupEmail" placeholder="Email address" required>
+        <input type="password" id="signupPassword" placeholder="Set password (min 6 chars)" required>
+        <input type="password" id="signupConfirmPassword" placeholder="Confirm password" required>
 
-        <div class="auth-switch">
-            <button type="button" id="phoneModeBtn" onclick="setContactMode('phone')">Use Phone</button>
-            <button type="button" id="emailModeBtn" class="inactive" onclick="setContactMode('email')">Use Email</button>
-        </div>
+        <button id="signupBtn" onclick="signupWithEmail()">Create Account</button>
 
-        <input type="text" id="contactValue" placeholder="10-digit phone number" inputmode="numeric" required>
+        <div class="oauth-divider">OR</div>
 
-        <div class="auth-helper">
-            Only one account can be created for each phone number or email address.
-        </div>
-
-        <button id="requestOtpBtn" onclick="requestOtp()">Send OTP</button>
-
-        <div class="otp-section" id="otpSection" hidden>
-            <input type="text" id="otpInput" placeholder="Enter 6-digit OTP" inputmode="numeric" maxlength="6">
-            <div class="auth-helper" id="otpMessage" hidden></div>
-            <div class="auth-helper warning" id="devOtpHint" hidden></div>
-            <button id="verifyOtpBtn" onclick="verifyOtp()">Verify OTP</button>
-            <button class="secondary-btn" onclick="requestOtp()">Resend OTP</button>
-
-            <div id="credentialsSection" hidden>
-                <input type="text" id="signupUsername" placeholder="Choose username (3-30 chars, letters/numbers/_)">
-                <input type="password" id="signupPassword" placeholder="Set password (min 6 chars)">
-                <input type="password" id="signupConfirmPassword" placeholder="Confirm password">
-                <button onclick="completeSignup()">Create Account</button>
-            </div>
-        </div>
+        <button id="googleSignupBtn" onclick="signupWithGoogle()" class="google-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+            Continue with Google
+        </button>
 
         <p class="auth-footer-link">
             Already have an account? <a href="login.html">Go to login</a>

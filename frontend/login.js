@@ -135,6 +135,11 @@ async function login() {
     }
 }
 
+function loginWithGoogle() {
+    // Google OAuth will be implemented
+    showToast('Google login integration coming soon.', 'info');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     if (isLoggedIn()) {
         const session = getUserSession();
