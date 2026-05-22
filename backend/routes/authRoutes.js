@@ -104,8 +104,8 @@ router.post("/login", async (req, res) => {
       contact: user.phone || user.email || user.username
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+    console.error("Login error:", err.message, err.code);
+    res.status(500).json({ error: "Server error", details: err.message });
   }
 });
 
@@ -287,27 +287,30 @@ router.post("/complete-signup", async (req, res) => {
       return res.status(400).json({ error: "Please enter a valid email address." });
     }
 
-    connection = await db.getConnection();
-    await connection.beginTransaction();
+    connection = await db.pool.connect();
+    await connection.query('BEGIN');
 
-    const result = await connection.query(
-      `SELECT 1 FROM users WHERE username = $1 LIMIT 1`,
-      [normalizedUsername]
-    );
-    const usernameRows = result.rows;
+    try {
+      const result = await connection.query(
+        `SELECT 1 FROM users WHERE username = $1 LIMIT 1`,
+        [normalizedUsername]
+      );
+      const usernameRows = result.rows;
 
-    if (usernameRows.length > 0) {
-      await connection.rollback();
-      return res.status(409).json({ error: "Username already exists. Please choose another one." });
-    }
+      if (usernameRows.length > 0) {
+        await connection.query('ROLLBACK');
+        connection.release();
+        return res.status(409).json({ error: "Username already exists. Please choose another one." });
+      }
 
-    const existingUser = await findExistingUser(connection, contactType, identifier);
-    if (existingUser) {
-      await connection.rollback();
-      return res.status(409).json({ error: `An account already exists for this ${contactType}.` });
-    }
+      const existingUser = await findExistingUser(connection, contactType, identifier);
+      if (existingUser) {
+        await connection.query('ROLLBACK');
+        connection.release();
+        return res.status(409).json({ error: `An account already exists for this ${contactType}.` });
+      }
 
-    const otpResult = await connection.query(
+      const otpResult = await connection.query(
       `SELECT otp_id
        FROM visitor_otps
        WHERE identifier = $1
@@ -318,40 +321,47 @@ router.post("/complete-signup", async (req, res) => {
        ORDER BY created_at DESC
        LIMIT 1
        FOR UPDATE`,
-      [identifier, contactType, normalizedOtp]
-    );
-    const otpRows = otpResult.rows;
-
-    if (otpRows.length === 0) {
-      await connection.rollback();
-      return res.status(400).json({ error: "Invalid or expired OTP." });
-    }
-
-    const insertResult = await connection.query(
-      `INSERT INTO users (username, password, phone, email, role)
-       VALUES ($1, $2, $3, $4, 'visitor')
-       RETURNING user_id`,
-      [normalizedUsername, password, phone, email]
-    );
-    const insertResultRows = insertResult.rows;
-
-    if (phone) {
-      await connection.query(
-        `INSERT INTO customers (phone, name, email)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (phone) DO UPDATE SET name = $2, email = $3`,
-        [phone, fullName.trim(), email]
+        [identifier, contactType, normalizedOtp]
       );
+      const otpRows = otpResult.rows;
+
+      if (otpRows.length === 0) {
+        await connection.query('ROLLBACK');
+        connection.release();
+        return res.status(400).json({ error: "Invalid or expired OTP." });
+      }
+
+      const insertResult = await connection.query(
+        `INSERT INTO users (username, password, phone, email, role)
+         VALUES ($1, $2, $3, $4, 'visitor')
+         RETURNING user_id`,
+        [normalizedUsername, password, phone, email]
+      );
+      const insertResultRows = insertResult.rows;
+
+      if (phone) {
+        await connection.query(
+          `INSERT INTO customers (phone, name, email)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (phone) DO UPDATE SET name = $2, email = $3`,
+          [phone, fullName.trim(), email]
+        );
+      }
+
+      await connection.query(
+        `UPDATE visitor_otps
+         SET consumed_at = CURRENT_TIMESTAMP
+         WHERE otp_id = $1`,
+        [otpRows[0].otp_id]
+      );
+
+      await connection.query('COMMIT');
+    } catch (txErr) {
+      await connection.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      connection.release();
     }
-
-    await connection.query(
-      `UPDATE visitor_otps
-       SET consumed_at = CURRENT_TIMESTAMP
-       WHERE otp_id = $1`,
-      [otpRows[0].otp_id]
-    );
-
-    await connection.commit();
 
     res.json({
       message: "Account created successfully.",
@@ -366,9 +376,6 @@ router.post("/complete-signup", async (req, res) => {
       }
     });
   } catch (err) {
-    if (connection) {
-      await connection.rollback();
-    }
     console.error("Complete signup error:", err);
     res.status(500).json({
       error: "Failed to complete signup. Please try again.",
@@ -573,64 +580,66 @@ router.post("/reset-password-by-username", async (req, res) => {
       return res.status(400).json({ error: "Password and confirm password do not match." });
     }
 
-    connection = await db.getConnection();
-    await connection.beginTransaction();
+    connection = await db.pool.connect();
+    await connection.query('BEGIN');
 
-    const user = await getUserByUsername(connection, username);
-    if (!user) {
-      await connection.rollback();
-      return res.status(404).json({ error: "No account found for this username." });
+    try {
+      const user = await getUserByUsername(connection, username);
+      if (!user) {
+        await connection.query('ROLLBACK');
+        connection.release();
+        return res.status(404).json({ error: "No account found for this username." });
+      }
+
+      const result = await connection.query(
+        `SELECT reset_otp_id
+         FROM password_reset_otps
+         WHERE user_id = $1
+           AND otp_code = $2
+           AND consumed_at IS NULL
+           AND expires_at >= NOW()
+         ORDER BY created_at DESC
+         LIMIT 1
+         FOR UPDATE`,
+        [user.user_id, normalizedOtp]
+      );
+      const otpRows = result.rows;
+
+      if (otpRows.length === 0) {
+        await connection.query('ROLLBACK');
+        connection.release();
+        return res.status(400).json({ error: "Invalid or expired OTP." });
+      }
+
+      await connection.query(
+        `UPDATE users
+         SET password = $1
+         WHERE user_id = $2`,
+        [newPassword, user.user_id]
+      );
+
+      await connection.query(
+        `UPDATE password_reset_otps
+         SET consumed_at = CURRENT_TIMESTAMP
+         WHERE reset_otp_id = $1`,
+        [otpRows[0].reset_otp_id]
+      );
+
+      await connection.query('COMMIT');
+
+      res.json({ message: "Password reset successful." });
+    } catch (txErr) {
+      await connection.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      connection.release();
     }
-
-    const result = await connection.query(
-      `SELECT reset_otp_id
-       FROM password_reset_otps
-       WHERE user_id = $1
-         AND otp_code = $2
-         AND consumed_at IS NULL
-         AND expires_at >= NOW()
-       ORDER BY created_at DESC
-       LIMIT 1
-       FOR UPDATE`,
-      [user.user_id, normalizedOtp]
-    );
-    const otpRows = result.rows;
-
-    if (otpRows.length === 0) {
-      await connection.rollback();
-      return res.status(400).json({ error: "Invalid or expired OTP." });
-    }
-
-    await connection.query(
-      `UPDATE users
-       SET password = $1
-       WHERE user_id = $2`,
-      [newPassword, user.user_id]
-    );
-
-    await connection.query(
-      `UPDATE password_reset_otps
-       SET consumed_at = CURRENT_TIMESTAMP
-       WHERE reset_otp_id = $1`,
-      [otpRows[0].reset_otp_id]
-    );
-
-    await connection.commit();
-
-    res.json({ message: "Password reset successful." });
   } catch (err) {
-    if (connection) {
-      await connection.rollback();
-    }
     console.error("Reset password by username error:", err);
     res.status(500).json({
       error: "Failed to reset password. Please try again.",
       details: process.env.NODE_ENV === "production" ? undefined : err.message
     });
-  } finally {
-    if (connection) {
-      connection.release();
-    }
   }
 });
 
@@ -722,59 +731,60 @@ router.post("/reset-password", async (req, res) => {
       return res.status(400).json({ error: "Please enter a valid email address." });
     }
 
-    connection = await db.getConnection();
-    await connection.beginTransaction();
+    connection = await db.pool.connect();
+    await connection.query('BEGIN');
 
-    const result = await connection.query(
-      `SELECT reset_otp_id, user_id
-       FROM password_reset_otps
-       WHERE identifier = $1
-         AND contact_type = $2
-         AND otp_code = $3
-         AND consumed_at IS NULL
-         AND expires_at >= NOW()
-       ORDER BY created_at DESC
-       LIMIT 1
-       FOR UPDATE`,
-      [identifier, contactType, normalizedOtp]
-    );
-    const otpRows = result.rows;
+    try {
+      const result = await connection.query(
+        `SELECT reset_otp_id, user_id
+         FROM password_reset_otps
+         WHERE identifier = $1
+           AND contact_type = $2
+           AND otp_code = $3
+           AND consumed_at IS NULL
+           AND expires_at >= NOW()
+         ORDER BY created_at DESC
+         LIMIT 1
+         FOR UPDATE`,
+        [identifier, contactType, normalizedOtp]
+      );
+      const otpRows = result.rows;
 
-    if (otpRows.length === 0) {
-      await connection.rollback();
-      return res.status(400).json({ error: "Invalid or expired OTP." });
+      if (otpRows.length === 0) {
+        await connection.query('ROLLBACK');
+        connection.release();
+        return res.status(400).json({ error: "Invalid or expired OTP." });
+      }
+
+      await connection.query(
+        `UPDATE users
+         SET password = $1
+         WHERE user_id = $2`,
+        [newPassword, otpRows[0].user_id]
+      );
+
+      await connection.query(
+        `UPDATE password_reset_otps
+         SET consumed_at = CURRENT_TIMESTAMP
+         WHERE reset_otp_id = $1`,
+        [otpRows[0].reset_otp_id]
+      );
+
+      await connection.query('COMMIT');
+
+      res.json({ message: "Password reset successful." });
+    } catch (txErr) {
+      await connection.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      connection.release();
     }
-
-    await connection.query(
-      `UPDATE users
-       SET password = $1
-       WHERE user_id = $2`,
-      [newPassword, otpRows[0].user_id]
-    );
-
-    await connection.query(
-      `UPDATE password_reset_otps
-       SET consumed_at = CURRENT_TIMESTAMP
-       WHERE reset_otp_id = $1`,
-      [otpRows[0].reset_otp_id]
-    );
-
-    await connection.commit();
-
-    res.json({ message: "Password reset successful." });
   } catch (err) {
-    if (connection) {
-      await connection.rollback();
-    }
     console.error("Reset password error:", err);
     res.status(500).json({
       error: "Failed to reset password. Please try again.",
       details: process.env.NODE_ENV === "production" ? undefined : err.message
     });
-  } finally {
-    if (connection) {
-      connection.release();
-    }
   }
 });
 
